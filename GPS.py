@@ -3,7 +3,9 @@ import time
 import string
 import pynmea2
 
-f = open('gps.txt', 'w')
+f = open('gps.txt', 'a')
+f.write('\n')
+f.close()
 
 while True:
 	port="/dev/ttyAMA0"
@@ -17,4 +19,7 @@ while True:
 		lng=newmsg.longitude
 		gps = "Latitude = " + str(lat) + " and Longitude = " + str(lng)
 		print(gps)
-		f.write('\n'.join(gps))
+		f = open('gps.txt', 'a')
+		f.write(gps)
+		f.write('\n')
+		f.close()

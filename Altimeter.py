@@ -8,6 +8,7 @@ import smbus
 import time
  
 f = open('Altimeter.txt', 'w')
+f.close()
 
 # Get I2C bus
 bus = smbus.SMBus(1)
@@ -116,4 +117,13 @@ while True :
 	pres = mpl3115a2.read_pres()
 	print("Pressure : %.2f kPa"%(pres['p']))
 	print(" ************************************* ")
-	f.write("Altitude : %.2f Feet"%(alt['a'] * 3.2808399), '\n', "Temperature in Fahrenheit : %.2f F"%(alt['f']), '\n', "Pressure : %.2f kPa"%(pres['p']), '\n'," ************************************* ",'\n' )
+	f = open('Altimeter.txt', 'a')
+	f.write("Altitude : %.2f Feet"%(alt['a'] * 3.2808399))
+	f.write('\n')
+	f.write("Temperature in Fahrenheit : %.2f F"%(alt['f']))
+	f.write('\n')
+	f.write("Pressure : %.2f kPa"%(pres['p']))
+	f.write('\n')
+	f.write(" *********")
+	f.write('\n')
+	f.close()
