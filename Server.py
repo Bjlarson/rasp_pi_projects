@@ -1,7 +1,7 @@
 import socket
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.bind(("192.168.1.24",1234))
+s.bind(("192.168.1.27",1234))
 s.listen(5)
 
 while True:
@@ -13,5 +13,5 @@ while True:
     clientsocket.send(bytes(msg, "utf-8"))
     
     while True:
-        incomeing = clientsocket.recv(16).decode()
+        incomeing = clientsocket.recv(6).decode()
         print (incomeing)
