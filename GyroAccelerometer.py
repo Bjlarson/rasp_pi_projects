@@ -52,6 +52,8 @@ MPU_Init()
 
 print (" Reading Data of Gyroscope and Accelerometer")
 
+f = open('Gyro.txt', 'w')
+
 while True:
 	
 	#Read Accelerometer raw value
@@ -74,5 +76,5 @@ while True:
 	Gz = gyro_z/131.0
 	
 
-	print ("Gx=%.2f" %Gx,"Gy=%.2f" %Gy,"Gz=%.2f" %Gz,"Ax=%.2f g" %Ax,"Ay=%.2f g" %Ay,"Az=%.2f g" %Az) 	
-	sleep(1)
+	print ("Gx=%.2f" %Gx,"Gy=%.2f" %Gy,"Gz=%.2f" %Gz,"Ax=%.2f g" %Ax,"Ay=%.2f g" %Ay,"Az=%.2f g" %Az) 
+	f.write("Gx=%.2f" %Gx,"Gy=%.2f" %Gy,"Gz=%.2f" %Gz,"Ax=%.2f g" %Ax,"Ay=%.2f g" %Ay,"Az=%.2f g" %Az, '\n')	

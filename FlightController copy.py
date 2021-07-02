@@ -52,7 +52,7 @@ while True:
             clientsocket.send(bytes("servo command", "utf-8"))
 
             elevatorAngle = int(incomeing[3:len(incomeing)])
-            kit.servo[0].angle = elevatorAngle
+            kit.servo[1].angle = elevatorAngle
             
         elif(incomeing[0:3] == "mtr"):
             print("Motor command")

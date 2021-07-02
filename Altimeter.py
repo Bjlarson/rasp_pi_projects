@@ -7,6 +7,8 @@
 import smbus
 import time
  
+f = open('Altimeter.txt', 'w')
+
 # Get I2C bus
 bus = smbus.SMBus(1)
  
@@ -99,7 +101,7 @@ class MPL3115A2():
  
 import adafruit_mpl3115a2
 mpl3115a2 = MPL3115A2()
- 
+
 while True :
 	mpl3115a2.control_alt_config()
 	mpl3115a2.data_config()
@@ -114,3 +116,4 @@ while True :
 	pres = mpl3115a2.read_pres()
 	print("Pressure : %.2f kPa"%(pres['p']))
 	print(" ************************************* ")
+	f.write("Altitude : %.2f Feet"%(alt['a'] * 3.2808399), '\n', "Temperature in Fahrenheit : %.2f F"%(alt['f']), '\n', "Pressure : %.2f kPa"%(pres['p']), '\n'," ************************************* ",'\n' )
