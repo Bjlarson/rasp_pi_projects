@@ -11,7 +11,7 @@ f = open('Altimeter.txt', 'w')
 f.close()
 
 # Get I2C bus
-bus = smbus.SMBus(1)
+bus = smbus.SMBus(3)
  
 # I2C address of the device
 MPL3115A2_DEFAULT_ADDRESS			= 0x60
