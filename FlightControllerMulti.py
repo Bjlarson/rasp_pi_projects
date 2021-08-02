@@ -13,7 +13,7 @@ in2 = 13
 en = 15
 
 in3 = 36
-in4 = 38
+in4 = 26
 enb = 40
 temp1 = 1
 
@@ -36,7 +36,7 @@ pb = GPIO.PWM(enb, 1000)
 p.start(25)
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.bind(("192.168.1.14",1234))
+s.bind(("192.168.1.13",1234))
 s.listen(5)
 
 while True:
