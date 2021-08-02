@@ -45,7 +45,7 @@ def read_raw_data(addr):
         return value
 
 
-bus = smbus.SMBus(1) 	# or bus = smbus.SMBus(0) for older version boards
+bus = smbus.SMBus(2) 	# or bus = smbus.SMBus(0) for older version boards
 Device_Address = 0x68   # MPU6050 device address
 
 MPU_Init()
@@ -53,6 +53,7 @@ MPU_Init()
 print (" Reading Data of Gyroscope and Accelerometer")
 
 f = open('Gyro.txt', 'w')
+f.close()
 
 while True:
 	
@@ -75,6 +76,18 @@ while True:
 	Gy = gyro_y/131.0
 	Gz = gyro_z/131.0
 	
-
-	print ("Gx=%.2f" %Gx,"Gy=%.2f" %Gy,"Gz=%.2f" %Gz,"Ax=%.2f g" %Ax,"Ay=%.2f g" %Ay,"Az=%.2f g" %Az) 
-	f.write("Gx=%.2f" %Gx,"Gy=%.2f" %Gy,"Gz=%.2f" %Gz,"Ax=%.2f g" %Ax,"Ay=%.2f g" %Ay,"Az=%.2f g" %Az, '\n')	
+	print ("Gx=%.2f" %Gx,"Gy=%.2f" %Gy,"Gz=%.2f" %Gz,"Ax=%.2f g" %Ax,"Ay=%.2f g" %Ay,"Az=%.2f g" %Az)
+	f = open('Gyro.txt', 'a')
+	f.write("Gx=%.2f" %Gx)
+	f.write('\n')
+	f.write("Gy=%.2f" %Gy)
+	f.write('\n')
+	f.write("Gz=%.2f" %Gz)
+	f.write('\n')
+	f.write("Ax=%.2f g" %Ax)
+	f.write('\n')
+	f.write("Ay=%.2f g" %Ay)
+	f.write('\n')
+	f.write("Az=%.2f g" %Az)
+	f.write('\n')
+	f.close()

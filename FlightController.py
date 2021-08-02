@@ -8,13 +8,9 @@ kit = ServoKit(channels = 8)
 servo_min = 0
 servo_Max = 180
 
-in1 = 11
-in2 = 13
-en = 15
-
-in3 = 36
-in4 = 38
-enb = 40
+in1 = 18
+in2 = 16
+en = 22
 temp1 = 1
 
 GPIO.setmode(GPIO.BOARD)
