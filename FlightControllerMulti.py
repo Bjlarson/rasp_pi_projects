@@ -78,12 +78,16 @@ while True:
                 if(temp1 == 1):
                     GPIO.output(in1,False)
                     GPIO.output(in2,True)
+                    GPIO.output(in3,True)
+                    GPIO.output(in4,False)
                     print("Forward")
                     clientsocket.send(bytes("Forward", "utf-8"))
                     x = 'z'
                 else:
                     GPIO.output(in1,True)
                     GPIO.output(in2,False)
+                    GPIO.output(in3,False)
+                    GPIO.output(in4)
                     print("Backward")
                     clientsocket.send(bytes("Backward", "utf-8"))
                     x = 'z'
@@ -93,6 +97,8 @@ while True:
                 clientsocket.send(bytes("Stop", "utf-8"))
                 GPIO.output(in1,False)
                 GPIO.output(in2,False)
+                GPIO.output(in3,False)
+                GPIO.output(in4,False)
                 x = 'z'
             
             elif x== 'for':
@@ -100,6 +106,8 @@ while True:
                 clientsocket.send(bytes("Forward", "utf-8"))
                 GPIO.output(in1,True)
                 GPIO.output(in2,False)
+                GPIO.output(in3,False)
+                GPIO.output(in4,True)
                 temp1 = 1
                 x = 'z'
         
@@ -108,6 +116,8 @@ while True:
                 clientsocket.send(bytes("Backward", "utf-8"))
                 GPIO.output(in1,False)
                 GPIO.output(in2,True)
+                GPIO.output(in3,True)
+                GPIO.output(in4,False)
                 temp1 = 0
                 x = 'z'
         
