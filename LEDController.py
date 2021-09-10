@@ -1,6 +1,6 @@
 import time
-from adafruit_servokit import ServoKit
-pwm = ServoKit(channels=8)
+import Adafruit_PCA9685
+pwm = Adafruit_PCA9685.PCA9685()
 
 pwm.set_pwm_freq(50)
 
