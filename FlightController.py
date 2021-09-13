@@ -20,6 +20,12 @@ while True:
     msg = "Welcome to the server!"
     
     clientsocket.send(bytes(msg, "utf-8"))
+
+    #arm ESC
+    kit.servo[motor].angle = 0
+
+    msg = "Connect Battery"
+    clientsocket.send(bytes(msg, "utf-8"))
     
     while True:
         incomeing = clientsocket.recv(6).decode()
