@@ -9,13 +9,13 @@ import RPi.GPIO as gpio #importing GPIO library
 ESC=12  #Connect the ESC in this GPIO pin 
 
 gpio.setmode(gpio.BOARD)
-gpio.setup(ESC, gpio.out)
+gpio.setup(ESC, gpio.OUT)
 
 pwm = gpio.PWM(ESC,50)
 pwm.start(0)
 
 max_value = 10 #change this if your ESC's max value is different or leave it be
-min_value = 5  #change this if your ESC's min value is different or leave it be
+min_value = 5.5  #change this if your ESC's min value is different or leave it be
 print ("For first time launch, select calibrate")
 print ("Type the exact word for the function you want")
 print ("calibrate OR manual OR control OR arm OR stop")
@@ -70,7 +70,7 @@ def control():
         pwm.ChangeDutyCycle(speed)   
         inp = input()
         
-        if inp == "m" & speed <= 5:
+        if inp == "m" and speed >= 5:
             speed -= .1    # decrementing the speed like hell
             print ("speed = %d") % speed
         elif inp == "e":    

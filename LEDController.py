@@ -1,12 +1,12 @@
 import time
-import Adafruit_PCA9685
-pwm = Adafruit_PCA9685.PCA9685()
+from board import SCL,SDA
+import busio
+import adafruit_pca9685
+
+i2c_bus = busio.I2C(SCL,SDA)
+pwm = adafruit_pca9685.PCA9685(i2c_bus)
 
 pwm.frequency = 50
-
-
-
-pwm.set_pwm_freq(50)
 
 # Demo using LED on of the PCA9685
 # Wire up the LED  on such that 
