@@ -23,7 +23,8 @@ while True:
     clientsocket.send(bytes(msg, "utf-8"))
 
     #arm ESC
-    kit.servo[motor].angle = 0
+    kit.servo[motor1].angle = 0
+    kit.servo[motor2].angle = 0
 
     msg = "Connect Battery"
     clientsocket.send(bytes(msg, "utf-8"))
