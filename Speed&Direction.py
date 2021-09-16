@@ -37,8 +37,8 @@ def MilesBetweenTwoPoints(lat1,long1,lat2,long2):
 
 	return miles
 
-def Feet(miles):
-	return miles*5280 
+def FeetPerSecond(miles,time1,time2):
+	return ((miles*5280)/(time2-time1))
 
 def MilesPerHour(miles,time1,time2):
 	return (miles/(time2-time1))*60*60
@@ -47,7 +47,22 @@ def DeterminDirectionFromTwoPoints(lat1,long1,lat2,long2):
 	y = Math.sin(λ2-λ1) * Math.cos(φ2)
 	x = Math.cos(φ1)*Math.sin(φ2) - Math.sin(φ1)*Math.cos(φ2)*Math.cos(λ2-λ1)
 	θ = Math.atan2(y, x)
-	brng = (θ*180/Math.PI + 360) % 360; # in degrees
+	return (θ*180/Math.PI + 360) % 360; # in degrees
+
+def DeterminFastestTurnToPoint(currentDirection, TargetDirection):
+	a = TargetDirection-currentDirection
+	b = TargetDirection - currentDirection + 360
+	c = TargetDirection - currentDirection - 360
+	
+	list = [abs(a),abs(b),abs(c)]
+
+	if(min(list) == abs(a)):
+		return (a/2)+90
+	if(min(list) == abs(b)):
+		return (b/2)+90
+	if(min(list) == abs(c)):
+		return (c/2)+90
+	
 
 while True:
 	port="/dev/ttyAMA0"
