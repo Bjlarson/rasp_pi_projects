@@ -11,8 +11,10 @@ beginingLong = 0
 beginingDirection = 0
 currentlat = 0
 currentlong = 0
+currentTime = 0
 lastLat = 0
 LastLong = 0
+lastTime = 0
 
 f = open('gps.txt', 'a')
 f.write('\n')
@@ -78,8 +80,22 @@ while True:
 
 		if(beginingLat == 0):
 			beginingLat = lat
+		else:
+			lastLat = currentlat
+			lastTime = currentTime
+			currentlat = lat
+			currentTime = time.time()
+			
 		if(beginingLong == 0):
 			beginingLong = lng
+		else:
+			lastlong = currentlong
+			currentlong = lng
+
+		if(beginingDirection == 0 and currentlat != 0 and currentlong != 0):
+			beginingDirection = DeterminDirectionFromTwoPoints
+
+		
 
 		gps = "Latitude = " + str(lat) + " and Longitude = " + str(lng)
 		print(gps)
