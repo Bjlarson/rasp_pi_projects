@@ -8,7 +8,6 @@ TargetLat = 41.808376
 TargetLong = -111.793380
 beginingLat = 0
 beginingLong = 0
-beginingDirection = 0
 currentlat = 0
 currentlong = 0
 lastLat = 0
@@ -38,32 +37,17 @@ def MilesBetweenTwoPoints(lat1,long1,lat2,long2):
 
 	return miles
 
-def FeetPerSecond(miles,time1,time2):
-	return ((miles*5280)/(time2-time1))
+def Feet(miles):
+	return miles*5280 
 
 def MilesPerHour(miles,time1,time2):
 	return (miles/(time2-time1))*60*60
 
 def DeterminDirectionFromTwoPoints(lat1,long1,lat2,long2):
-	y = math.sin(long2-long1) * math.cos(lat2)
-	x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(long2-long1)
-	θ = math.atan2(y, x)
-	return (θ*180/math.PI + 360) % 360; # in degrees
-
-def DeterminFastestTurnToPoint(currentDirection, TargetDirection):
-	a = TargetDirection-currentDirection
-	b = TargetDirection - currentDirection + 360
-	c = TargetDirection - currentDirection - 360
-	
-	list = [abs(a),abs(b),abs(c)]
-
-	if(min(list) == abs(a)):
-		return (a/2)+90
-	if(min(list) == abs(b)):
-		return (b/2)+90
-	if(min(list) == abs(c)):
-		return (c/2)+90
-	
+	y = Math.sin(λ2-λ1) * Math.cos(φ2)
+	x = Math.cos(φ1)*Math.sin(φ2) - Math.sin(φ1)*Math.cos(φ2)*Math.cos(λ2-λ1)
+	θ = Math.atan2(y, x)
+	brng = (θ*180/Math.PI + 360) % 360; # in degrees
 
 while True:
 	port="/dev/ttyAMA0"
@@ -76,10 +60,6 @@ while True:
 		lat=newmsg.latitude
 		lng=newmsg.longitude
 
-		if(beginingLat == 0):
-			beginingLat = lat
-		if(beginingLong == 0):
-			beginingLong = lng
 
 		gps = "Latitude = " + str(lat) + " and Longitude = " + str(lng)
 		print(gps)
