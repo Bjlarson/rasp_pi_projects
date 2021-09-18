@@ -12,9 +12,15 @@ beginingDirection = 0
 currentlat = 0
 currentlong = 0
 currentTime = 0
+currentDirection = 0
 lastLat = 0
 LastLong = 0
 lastTime = 0
+lastDirection = 0
+miles = 0
+mph = 0
+fps = 0
+turnAmount = 90
 
 f = open('gps.txt', 'a')
 f.write('\n')
@@ -52,7 +58,7 @@ def DeterminDirectionFromTwoPoints(lat1,long1,lat2,long2):
 	θ = math.atan2(y, x)
 	return (θ*180/math.PI + 360) % 360; # in degrees
 
-def DeterminFastestTurnToPoint(currentDirection, TargetDirection):
+def DeterminBestTurnToPoint(currentDirection, TargetDirection):
 	a = TargetDirection-currentDirection
 	b = TargetDirection - currentDirection + 360
 	c = TargetDirection - currentDirection - 360
@@ -92,14 +98,21 @@ while True:
 			lastlong = currentlong
 			currentlong = lng
 
-		if(beginingDirection == 0 and currentlat != 0 and currentlong != 0):
-			beginingDirection = DeterminDirectionFromTwoPoints
+		if(lastLat != 0 and lastlong != 0):
+			currentDirection = DeterminDirectionFromTwoPoints(lastLat,lastlong,currentlat,currentlong)
+			turnAmount = DeterminFastestTurnToPoint(currentDirection,DeterminDirectionFromTwoPoints(currentlat,currentlong,TargetLat,TargetLong))
+			miles = MilesBetweenTwoPoints(lastLat,lastlong,currentlat,currentlong)
 
-		
+		if(beginingDirection == 0 and currentlat != 0 and currentlong != 0):
+			beginingDirection = DeterminDirectionFromTwoPoints(beginingLat,beginingLong,currentlat,currentlong)
+			miles = MilesBetweenTwoPoints(beginingLat,beginingLong,currentlat,currentlong)
+
+		mph = MilesPerHour(miles,lastTime,currentTime)
+		fps = FeetPerSecond(miles,lastTime,currentTime)
 
 		gps = "Latitude = " + str(lat) + " and Longitude = " + str(lng)
 		print(gps)
 		f = open('gps.txt', 'a')
-		f.write(gps)
+		f.write(gps + " CurrentDirection = " + str(currentDirection) + " MPH = " + str(mph) + " FPS = " + str(fps) + " TurnAmount = " + str(turnAmount) + " Takeoff/LandingDirection = " + str(beginingDirection))
 		f.write('\n')
 		f.close()
