@@ -86,6 +86,7 @@ while True:
 
 		if(beginingLat == 0):
 			beginingLat = lat
+			currentTime = time.time()
 		else:
 			lastLat = currentlat
 			lastTime = currentTime
@@ -100,15 +101,16 @@ while True:
 
 		if(lastLat != 0 and lastlong != 0):
 			currentDirection = DeterminDirectionFromTwoPoints(lastLat,lastlong,currentlat,currentlong)
-			turnAmount = DeterminFastestTurnToPoint(currentDirection,DeterminDirectionFromTwoPoints(currentlat,currentlong,TargetLat,TargetLong))
+			turnAmount = DeterminBestTurnToPoint(currentDirection,DeterminDirectionFromTwoPoints(currentlat,currentlong,TargetLat,TargetLong))
 			miles = MilesBetweenTwoPoints(lastLat,lastlong,currentlat,currentlong)
 
 		if(beginingDirection == 0 and currentlat != 0 and currentlong != 0):
 			beginingDirection = DeterminDirectionFromTwoPoints(beginingLat,beginingLong,currentlat,currentlong)
 			miles = MilesBetweenTwoPoints(beginingLat,beginingLong,currentlat,currentlong)
 
-		mph = MilesPerHour(miles,lastTime,currentTime)
-		fps = FeetPerSecond(miles,lastTime,currentTime)
+		if(lastTime != 0):
+			mph = MilesPerHour(miles,lastTime,currentTime)
+			fps = FeetPerSecond(miles,lastTime,currentTime)
 
 		gps = "Latitude = " + str(lat) + " and Longitude = " + str(lng)
 		print(gps)
