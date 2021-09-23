@@ -56,7 +56,7 @@ def DeterminDirectionFromTwoPoints(lat1,long1,lat2,long2):
 	y = math.sin(long2-long1) * math.cos(lat2)
 	x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(long2-long1)
 	θ = math.atan2(y, x)
-	return (θ*180/math.PI + 360) % 360; # in degrees
+	return (θ*180/math.pi + 360) % 360; # in degrees
 
 def DeterminBestTurnToPoint(currentDirection, TargetDirection):
 	a = TargetDirection-currentDirection
