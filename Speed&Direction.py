@@ -22,7 +22,7 @@ mph = 0
 fps = 0
 turnAmount = 90
 
-f = open('gps.txt', 'a')
+f = open('SpeedAndDirection.txt', 'a')
 f.write('\n')
 f.close()
 
@@ -114,7 +114,7 @@ while True:
 
 		gps = "Latitude = " + str(lat) + " and Longitude = " + str(lng)
 		print(gps)
-		f = open('gps.txt', 'a')
+		f = open('SpeedAndDirection.txt', 'a')
 		f.write(gps + " CurrentDirection = " + str(currentDirection) + " MPH = " + str(mph) + " FPS = " + str(fps) + " TurnAmount = " + str(turnAmount) + " Takeoff/LandingDirection = " + str(beginingDirection))
 		f.write('\n')
 		f.close()
