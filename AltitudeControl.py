@@ -104,8 +104,9 @@ import adafruit_mpl3115a2
 import time
 mpl3115a2 = MPL3115A2()
 
-targetAltitude = input()
-targetAltDist = input()
+targetAltitude = input() 
+targetAltDist = input("Feet from Target") #should be in feet from target
+speed = input("Feet per Min")
 currentTime = 0
 currentAlt = 0
 lastTime = 0
@@ -119,6 +120,15 @@ def CalculateDensityAltitude(altitude, temperature):
 
 def FeetPerMin(CurrentAltimeter,LastAltimeter,curTime,lastT):
 	return ((LastAltimeter - CurrentAltimeter)/(curTime-lastT))*60
+
+def DetermineClimbDesentRate():
+	targetFPM = (targetAltitude - currentAlt)/(speed/targetAltDist)
+	if(targetFPM > 500):
+		return 500
+	else:
+		return targetFPM
+
+
 
 
 while True :
@@ -141,11 +151,19 @@ while True :
 	densityAltitude = CalculateDensityAltitude(currentAlt,alt['c'])
 	print(densityAltitude)
 
+
 	if(currentTime != 0 and lastTime != 0):
-		print("Feet per Min: " + FeetPerMin(currentAlt,lastAlt,currentTime,lastTime))
+		c_s_rate = FeetPerMin(currentAlt,lastAlt,currentTime,lastTime)
+		print("Feet per Min: " + c_s_rate)
 	else:
 		currenttime = time.time()
 		print("Feet per Min: 0")
+
+
+	if(c_s_rate > DetermineClimbDesentRate()):
+		print("Nose Down")
+	elif(c_s_rate < DetermineClimbDesentRate()):
+		print("Nose Up")
 	print(" ************************************* ")
 
 
