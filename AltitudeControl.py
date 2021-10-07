@@ -128,9 +128,6 @@ def DetermineClimbDesentRate():
 	else:
 		return targetFPM
 
-
-
-
 while True :
 	mpl3115a2.control_alt_config()
 	mpl3115a2.data_config()
