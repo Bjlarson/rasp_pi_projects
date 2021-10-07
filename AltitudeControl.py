@@ -106,7 +106,7 @@ mpl3115a2 = MPL3115A2()
 
 targetAltitude = input() 
 targetAltDist = input("Feet from Target") #should be in feet from target
-speed = input("Feet per Min")
+speed = input("Feet per min")
 currentTime = 0
 currentAlt = 0
 lastTime = 0
