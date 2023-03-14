@@ -213,6 +213,27 @@ def read_raw_data(addr):
         if(value > 32768):
                 value = value - 65536
         return value
+
+def get_gyro_accelerameter_clean_data():
+    #Read Accelerometer raw value
+	acc_x = read_raw_data(ACCEL_XOUT_H)
+	acc_y = read_raw_data(ACCEL_YOUT_H)
+	acc_z = read_raw_data(ACCEL_ZOUT_H)
+	
+	#Full scale range +/- 250 degree/C as per sensitivity scale factor
+	Ax = acc_x/16384.0
+	Ay = acc_y/16384.0
+	Az = acc_z/16384.0
+
+def get_gyro_pitch_clean_data():	
+	#Read Gyroscope raw value
+	gyro_x = read_raw_data(GYRO_XOUT_H)
+	gyro_y = read_raw_data(GYRO_YOUT_H)
+	gyro_z = read_raw_data(GYRO_ZOUT_H)
+	
+	Gx = gyro_x/131.0
+	Gy = gyro_y/131.0
+	Gz = gyro_z/131.0
 #endregion
 
 #region Initialize Boards
@@ -226,8 +247,12 @@ mpl3115a2 = MPL3115A2()
 #setup servo kit board with 8 channels
 kit = ServoKit(channels = 8)
 
-# initialize I2C bus
-bus = smbus.SMBus(3)
+# initialize I2C bus for altimeter
+Altbus = smbus.SMBus(3)
+
+#initialize Gyro
+Gyrobus = smbus.SMBus(2) 	# or bus = smbus.SMBus(0) for older version boards
+MPU_Init()
 #endregion
 
 # create a new file and immediately close it to clear previous data
