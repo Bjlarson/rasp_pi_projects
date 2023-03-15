@@ -11,11 +11,15 @@ import RPi.GPIO as GPIO
 from adafruit_servokit import ServoKit
 
 #region global variables
+#Location Variables
 portNumber = 1
 pictureLocation = "/home/blake/Documents/FlightPics/"
 elevatorPort = 1
 rudderPort = 0
 motorPort = 2
+
+#takeoff Variables
+takeoffSpeed = 20.0
 #endregion
 
 #region altimeter setup - Variables
@@ -119,21 +123,6 @@ class MPL3115A2:
         return {'p': pressure}
 #endregion
 
-#region MISC Methods
-# Logging Method
-def log_message(message):
-    current_time = datetime.datetime.now()
-
-    with open('FlightLog.txt', 'a') as log_file:
-        log_file.write('Time: ' + current_time.strftime("%Y-%m-%d %H:%M:%S") + '  message: ' + message + '\n')
-
-#take a picture
-def take_Pic_and_save(camera, FileName):
-    fileLocationAndName = pictureLocation + FileName + current_time.strftime("%Y-%m-%d %H:%M:%S") + ".jpg"
-    camera.capture(fileLocationAndName)
-    log_message("Picture Taken: " + FileName + current_time.strftime("%Y-%m-%d %H:%M:%S"))
-#endregion
-
 #region GPS Methods
 #determin the amount of miles based on two latitudes and longitudes
 def miles_between_two_points(lat1, long1, lat2, long2):
@@ -214,28 +203,80 @@ def read_raw_data(addr):
                 value = value - 65536
         return value
 
-def get_gyro_accelerameter_clean_data():
+def get_x_acceleration():
     #Read Accelerometer raw value
 	acc_x = read_raw_data(ACCEL_XOUT_H)
-	acc_y = read_raw_data(ACCEL_YOUT_H)
-	acc_z = read_raw_data(ACCEL_ZOUT_H)
 	
 	#Full scale range +/- 250 degree/C as per sensitivity scale factor
-	Ax = acc_x/16384.0
-	Ay = acc_y/16384.0
-	Az = acc_z/16384.0
+	return acc_x / 16384.0
 
-def get_gyro_pitch_clean_data():	
-	#Read Gyroscope raw value
-	gyro_x = read_raw_data(GYRO_XOUT_H)
-	gyro_y = read_raw_data(GYRO_YOUT_H)
-	gyro_z = read_raw_data(GYRO_ZOUT_H)
-	
-	Gx = gyro_x/131.0
-	Gy = gyro_y/131.0
-	Gz = gyro_z/131.0
+def get_y_acceleration():
+    #Read Accelerometer raw value
+    acc_y = read_raw_data(ACCEL_YOUT_H)
+
+    #Full scale range +/- 250 degree/C as per sensitivity scale factor
+    return acc_y / 16384.0
+
+def get_z_acceleration():
+    #Read Accelerometer raw value
+    acc_z = read_raw_data(ACCEL_ZOUT_H)
+    
+    #Full scale range +/- 250 degree/C as per sensitivity scale factor
+    return acc_z / 16384.0
+
+def get_x_pitch():
+    # Read Gyroscope raw value
+    gyro_x = read_raw_data(GYRO_XOUT_H)
+
+    # Convert raw data to degrees per second
+    return gyro_x / 131.0
+
+def get_y_pitch():
+    #Read Gyroscope raw value
+    gyro_y = read_raw_data(GYRO_YOUT_H)
+
+    #Convert raw data to degrees per second
+    return gyro_y / 131.0
+
+def get_z_pitch():
+    #Read Gyroscope raw value
+    gyro_z = read_raw_data(GYRO_ZOUT_H)
+
+    return gyro_z / 131.0
 #endregion
 
+#region MISC Methods
+# Logging Method
+def log_message(message):
+    current_time = datetime.datetime.now()
+
+    with open('FlightLog.txt', 'a') as log_file:
+        log_file.write('Time: ' + current_time.strftime("%Y-%m-%d %H:%M:%S") + '  message: ' + message + '\n')
+
+#take a picture
+def take_Pic_and_save(camera, FileName):
+    fileLocationAndName = pictureLocation + FileName + current_time.strftime("%Y-%m-%d %H:%M:%S") + ".jpg"
+    camera.capture(fileLocationAndName)
+    log_message("Picture Taken: " + FileName + current_time.strftime("%Y-%m-%d %H:%M:%S"))
+#endregion
+
+#region takeoff Methods
+#determins if we can takeoff at current speed
+def check_can_takeoff(speed):
+    return speed > takeoffSpeed
+
+
+
+#check pitch and if we are gaining altitude
+
+
+
+#endregion
+
+#region preflight methods
+#endregion
+
+#endregion
 #region Initialize Boards
 #setup camera
 camera = PiCamera()
