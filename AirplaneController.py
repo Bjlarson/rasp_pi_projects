@@ -269,6 +269,7 @@ def receive_message(client_socket):
 #endregion
 
 #region preflight methods
+#calibrate the esc
 def Calibrate(client_socket):
     pwm.ChangeDutyCycle(0)
     send_message(client_socket, "Disconnect the battery and send c input when ready")
