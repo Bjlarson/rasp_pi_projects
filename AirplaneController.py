@@ -6,7 +6,6 @@ import serial
 import pynmea2
 import math
 import PiCamera
-import bluetooth
 import RPi.GPIO as GPIO
 from adafruit_servokit import ServoKit
 
@@ -258,6 +257,53 @@ def take_Pic_and_save(camera, FileName):
     fileLocationAndName = pictureLocation + FileName + current_time.strftime("%Y-%m-%d %H:%M:%S") + ".jpg"
     camera.capture(fileLocationAndName)
     log_message("Picture Taken: " + FileName + current_time.strftime("%Y-%m-%d %H:%M:%S"))
+
+def send_message(client_socket, message):
+    client_socket.send(message)
+
+def receive_message(client_socket):
+    return client_socket.recv(1024)
+     
+#endregion
+
+#region preflight methods
+def Calibrate(client_socket):
+    pwm.ChangeDutyCycle(0)
+    send_message(client_socket, "Disconnect the battery and send c input when ready")
+    recipt = receive_message(client_socket)
+    if recipt == 'c':
+        pwm.ChangeDutyCycle(max_value)
+        send_message(client_socket, 'Connect the battery NOW.. you will here two beeps, then wait for a gradual falling tone then send c input')
+        recipt = receive_message(client_socket)
+        if recipt == 'c':
+            pwm.ChangeDutyCycle(min_value)            
+            send_message(client_socket, "its working")
+            time.sleep(7)
+            send_message(client_socket, "its working")
+            time.sleep (5)
+            send_message(client_socket,"Im working on it, DONT WORRY JUST WAIT.....")
+            pwm.ChangeDutyCycle(0)   
+            time.sleep(2)
+            send_message(client_socket, "Arming ESC now...")
+            pwm.ChangeDutyCycle(min_value)   
+            time.sleep(1)
+            send_message(client_socket, "Calibration Complete")
+
+def arm(client_socket): #This is the arming procedure of an ESC 
+    send_message(client_socket, 'Connect the battery and send c input')
+    recipt = receive_message(client_socket)
+    if recipt == 'c':
+        pwm.ChangeDutyCycle(0)   
+        time.sleep(1)
+        pwm.ChangeDutyCycle(max_value)   
+        time.sleep(1)
+        pwm.ChangeDutyCycle(min_value)   
+        time.sleep(1)
+        control() 
+        
+def stop(): #This will stop every action your Pi is performing for ESC ofcourse.
+    pwm.ChangeDutyCycle(0) 
+    pwm.stop()
 #endregion
 
 #region takeoff Methods
@@ -273,9 +319,16 @@ def check_can_takeoff(speed):
 
 #endregion
 
-#region preflight methods
-#endregion
+#region Normal flight methods
+def FeetPerMin(CurrentAltimeter,LastAltimeter,curTime,lastT):
+	return ((LastAltimeter - CurrentAltimeter)/(curTime-lastT))*60
 
+def DetermineClimbDesentRate():
+	targetFPM = (targetAltitude - currentAlt)/(speed/targetAltDist)
+	if(targetFPM > 500):
+		return 500
+	else:
+		return targetFPM
 #endregion
 #region Initialize Boards
 #setup camera
