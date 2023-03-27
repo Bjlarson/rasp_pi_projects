@@ -261,9 +261,11 @@ def take_Pic_and_save(camera, FileName):
     camera.capture(fileLocationAndName)
     log_message("Picture Taken: " + FileName + current_time.strftime("%Y-%m-%d %H:%M:%S"))
 
+#sends a message to the client 
 def send_message(client_socket, message):
     client_socket.send(message)
 
+#waits for a message from the clienadded comments
 def receive_message(client_socket):
     return client_socket.recv(1024)
      
