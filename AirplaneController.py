@@ -16,9 +16,12 @@ pictureLocation = "/home/blake/Documents/FlightPics/"
 elevatorPort = 1
 rudderPort = 0
 motorPort = 2
+motorMax = 180
+motorMin = 20
 
 #takeoff Variables
 takeoffSpeed = 20.0
+startingAlt
 #endregion
 
 #region altimeter setup - Variables
@@ -267,43 +270,42 @@ def receive_message(client_socket):
 #endregion
 
 #region preflight methods
-def Calibrate(client_socket):
-    pwm.ChangeDutyCycle(0)
+#Calibrate the ESCMotor
+def Calibrate(client_socket, kit):
+    kit.servo[motorPort].angle = 0
     send_message(client_socket, "Disconnect the battery and send c input when ready")
     recipt = receive_message(client_socket)
     if recipt == 'c':
-        pwm.ChangeDutyCycle(max_value)
+        kit.servo[motorPort].angle = motorMax
         send_message(client_socket, 'Connect the battery NOW.. you will here two beeps, then wait for a gradual falling tone then send c input')
         recipt = receive_message(client_socket)
         if recipt == 'c':
-            pwm.ChangeDutyCycle(min_value)            
+            kit.servo[motorPort].angle = motorMin          
             send_message(client_socket, "its working")
             time.sleep(7)
             send_message(client_socket, "its working")
             time.sleep (5)
             send_message(client_socket,"Im working on it, DONT WORRY JUST WAIT.....")
-            pwm.ChangeDutyCycle(0)   
+            kit.servo[motorPort].angle = 0 
             time.sleep(2)
             send_message(client_socket, "Arming ESC now...")
-            pwm.ChangeDutyCycle(min_value)   
+            kit.servo[motorPort].angle = motorMin   
             time.sleep(1)
             send_message(client_socket, "Calibration Complete")
 
-def arm(client_socket): #This is the arming procedure of an ESC 
+def arm(client_socket, kit): #This is the arming procedure of an ESC 
     send_message(client_socket, 'Connect the battery and send c input')
     recipt = receive_message(client_socket)
     if recipt == 'c':
-        pwm.ChangeDutyCycle(0)   
+        kit.servo[motorPort].angle = 0   
         time.sleep(1)
-        pwm.ChangeDutyCycle(max_value)   
+        kit.servo[motorPort].angle = motorMax 
         time.sleep(1)
-        pwm.ChangeDutyCycle(min_value)   
-        time.sleep(1)
-        control() 
+        kit.servo[motorPort].angle = motorMin  
+        time.sleep(1) 
         
-def stop(): #This will stop every action your Pi is performing for ESC ofcourse.
-    pwm.ChangeDutyCycle(0) 
-    pwm.stop()
+def stop(client_socket, kit): #This will stop every action your Pi is performing for ESC ofcourse.
+    kit.servo[motorPort].angle = 0
 #endregion
 
 #region takeoff Methods
@@ -311,7 +313,8 @@ def stop(): #This will stop every action your Pi is performing for ESC ofcourse.
 def check_can_takeoff(speed):
     return speed > takeoffSpeed
 
-
+def Check_has_takenoff(altitude):
+    return altitude > startingAlt
 
 #check pitch and if we are gaining altitude
 
