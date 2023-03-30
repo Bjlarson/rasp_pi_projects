@@ -21,7 +21,17 @@ motorMin = 20
 
 #takeoff Variables
 takeoffSpeed = 20.0
-startingAlt
+#endregion
+
+
+#region Airplane class
+#airplane Data Class
+class Airplane:
+    def __init__(self, elevatorAngle, rudderAngle, motorSpeed, startingAlt):
+        self.elevatorAngle = elevatorAngle
+        self.rudderAngle = rudderAngle
+        self.motorSpeed = motorSpeed
+        self.startingAlt = startingAlt
 #endregion
 
 #region altimeter setup - Variables
@@ -112,6 +122,18 @@ class MPL3115A2:
         fTemp = cTemp * 1.8 + 32
  
         return {"a": altitude, "c": cTemp, "f": fTemp}
+    
+    def read_alt(self):
+        """Read data back from MPL3115A2_REG_STATUS(0x00), 6 bytes
+        status, tHeight MSB, tHeight CSB, tHeight LSB, temp MSB, temp LSB"""
+        data = bus.read_i2c_block_data(MPL3115A2_DEFAULT_ADDRESS, MPL3115A2_REG_STATUS, 6)
+ 
+        # Convert the data to 20-bits
+        tHeight = ((data[1] * 65536) + (data[2] * 256) + (data[3] & 0xF0)) / 16
+ 
+        altitude = tHeight / 16.0
+ 
+        return altitude
 
     def read_pres(self):
         """Read data back from MPL3115A2_REG_STATUS(0x00), 4 bytes
@@ -315,26 +337,105 @@ def stop(client_socket, kit): #This will stop every action your Pi is performing
 def check_can_takeoff(speed):
     return speed > takeoffSpeed
 
+#checks if we have a higher altitude than starting point
 def Check_has_takenoff(altitude):
     return altitude > startingAlt
-
-#check pitch and if we are gaining altitude
-
-
-
 #endregion
 
 #region Normal flight methods
 def FeetPerMin(CurrentAltimeter,LastAltimeter,curTime,lastT):
 	return ((LastAltimeter - CurrentAltimeter)/(curTime-lastT))*60
 
-def DetermineClimbDesentRate():
-	targetFPM = (targetAltitude - currentAlt)/(speed/targetAltDist)
-	if(targetFPM > 500):
-		return 500
-	else:
-		return targetFPM
+#get the climb or decent rate
+def DetermineClimbDesentRate(endAlt, startAlt, MPH, MilesToAlt):
+    targetFPM = (endAlt - startAlt)/(MPH/MilesToAlt)
+    log_message("target feet per min " + targetFPM)
+    return targetFPM
+    
+#set Elevators and engine to meet the rate of climb
+def Set_Elevators_Engine_To_ROC(lastAlt, currentAlt, targetAlt, MPH, milesToAlt, distLastTraveled, airplane, kit):
+    currentRate = DetermineClimbDesentRate(currentAlt, lastAlt, MPH, distLastTraveled)
+    targetRate = DetermineClimbDesentRate(targetAlt, currentAlt, MPH, milesToAlt)
+
+    if (currentRate < targetRate):
+        if(currentRate >= 800):
+            return
+        
+        if(abs(currentRate - targetRate) < 100):
+            Set_Elevator(kit, (airplane.elevatorAngle + .05), airplane)
+            Set_throttle(kit, (airplane.motorSpeed + 5), airplane)
+        else:
+            Set_Elevator(kit, (airplane.elevatorAngle + .1), airplane)
+            Set_throttle(kit, (airplane.motorSpeed + 10), airplane)
+    elif(currentRate > targetRate):
+        if(abs(currentRate - targetRate) < 100):
+            Set_Elevator(kit, (airplane.elevatorAngle - .05), airplane)
+            Set_throttle(kit, (airplane.motorSpeed - 5), airplane)
+        else:
+            Set_Elevator(kit, (airplane.elevatorAngle - .1), airplane)
+            Set_throttle(kit, (airplane.motorSpeed - 10), airplane)
+
+
+#set a speed between 20 - 180 or 0
+def Set_throttle(kit, speed, airplane):
+    if(speed > 180):
+        speed = 180
+    elif(speed < 0):
+        speed = 0
+    kit.servo[motorPort].angle(speed)
+    log_message("motor speed set to " + speed)
+    airplane.motorSpeed = speed
+
+#set a rudder location between 0 and 180
+def Set_Rudder(kit, angle, airplane):
+    if(angle > 180):
+        angle = 180
+    elif(angle < 0):
+        angle = 0
+    kit.servo[rudderPort].angle(angle)
+    log_message("set rudder to " + angle)
+    airplane.rudderAngle = angle 
+
+#set a elevator postition between -1 or 1
+def Set_Elevator(kit, angle, airplane):
+    if(angle > 1):
+        angle = 1
+    elif(angle < -1):
+        angle = -1
+
+    if(angle <= 0):
+        kit.servo[elevatorPort].angle(abs(angle) * 90)
+    else:
+        kit.servo[elevatorPort].angle((angle*90) + 90)  
+    log_message("set elevator to " + (abs(angle) * 90))
+    airplane.elevatorAngle = angle
+
+#Check out current direction and move towards point
+def Move_Towards_target(TargetLat, TargetLong, CurrentLat, CurrentLong, LastLat, LastLong, kit, airplane):
+    CurrentDirection = determin_direction_from_two_points(LastLat, LastLong, CurrentLat, CurrentLong)
+    targetDirection = determin_direction_from_two_points(CurrentLat, CurrentLong, TargetLat, TargetLong)
+
+    turnAngle = determin_best_turn_to_point(CurrentDirection, targetDirection)
+    Set_Rudder(kit, turnAngle, airplane)
+
+#Check if we are in a stall
+def Check_If_Stalling(currentRate, LastRate, TargetRate, pitch):
+    if(pitch > 45 & currentRate < LastRate & currentRate < TargetRate):
+        log_message("Current: " + currentRate + " Last: " + LastRate + " Target: " + TargetRate + " pitch: " + pitch)
+        return True
+
+
+#Check if we have reacehed a waypoint to determin if we are within 1ft from the destination
+def Have_Reached_Waypoint(TargetLat, TargetLong, currentLat, currentLong, altitude, targetAltitude):
+    miles = miles_between_two_points(TargetLat, TargetLong, currentLat, currentLong)
+    if ((miles*5280) <= 1 & abs(altitude - targetAltitude) < 10):
+        #increment to next way point
+        return True
+    return False
+
+#set
 #endregion
+
 #region Initialize Boards
 #setup camera
 camera = PiCamera()
@@ -352,13 +453,16 @@ Altbus = smbus.SMBus(3)
 #initialize Gyro
 Gyrobus = smbus.SMBus(2) 	# or bus = smbus.SMBus(0) for older version boards
 MPU_Init()
+
+#initialize airplane variables
+plane = Airplane(0, 90, 0, mpl3115a2.read_alt())
 #endregion
 
 # create a new file and immediately close it to clear previous data
 open('Altimeter.txt', 'w').close()
 
 #arm ESC
-kit.servo[motor].angle = 0
+kit.servo[motorPort].angle = 0
 
 # setup connection with bluetooth
 server_socket = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
