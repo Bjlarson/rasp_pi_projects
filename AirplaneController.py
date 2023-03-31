@@ -342,7 +342,10 @@ def arm(client_socket, kit): #This is the arming procedure of an ESC
         time.sleep(1) 
         
 def stop(client_socket, kit): #This will stop every action your Pi is performing for ESC ofcourse.
+    log_message("stoped")
     kit.servo[motorPort].angle = 0
+    kit.servo[elevatorPort].angle = 90
+    kit.servo[rudderPort].angle = 90
 #endregion
 
 #region takeoff Methods
@@ -382,6 +385,17 @@ def Has_Recoverd(lastSpeed, currentSpeed, pitch, airplane):
     
     log_message("Last Speed: " + str(lastSpeed) + " Current Speed: " + str(currentSpeed) + " Pitch: " + str(pitch))
     return False
+
+#estimates if we are close to or on the ground during a stall and if we should start the landing shut down process
+def Should_Emergency_Land(altitude, TargetAlt, startingAlt, airplane):
+    global mode
+    if( altitude <= startingAlt + 10 or altitude < TargetAlt - 150):
+        airplane.mode = "land"
+        mode = "land"
+        return True
+    
+    return False
+
 #endregion
 
 #region Normal flight methods
@@ -491,7 +505,41 @@ def Slow_Flight_Speed(currentSpeed, targetSpeed, kit, airplane):
 
 #control decent rate with motor speed
 def Slow_Flight_Decent(currentRate, targetRate, kit, airplane):
+    if(currentRate > targetRate):
+        Set_throttle(kit, airplane.motorSpeed + 5, airplane)
+    elif(currentRate < targetRate):
+        Set_throttle(kit, airplane.motorSpeed - 1, airplane)
 
+#checks if we are close enough to the landing point to start the landing and shutdown process
+def Should_Land(currentAlt, DistToTarget, TargetAlt, airplane):
+    global mode
+    if(currentAlt <= TargetAlt + 2 & DistToTarget <= 10):
+        mode = "land"
+        airplane.mode = "land"
+        return True
+    
+    return False
+
+#endregion
+
+#region Landing Methods
+#Keep pitch level
+def Keep_Pitch_Level(Pitch, kit, airplane):
+    if (Pitch > 0):
+        Set_Elevator(kit, airplane.elevatorAngle - .01)
+    elif(Pitch < 0):
+        Set_Elevator(kit, airplane.elevatorAngle + .01)
+
+#keep Landing heading
+def Keep_Landing_Heading(currentDirection, landingDirection, kit, airplane):
+    turnAngle = determin_best_turn_to_point(currentDirection, landingDirection)
+    Set_Rudder(kit, turnAngle, airplane)
+
+#Has Landed
+def Has_Landed(altitude, targetAltitude):
+    return (abs(altitude - targetAltitude) <= 1)
+
+#endregion
 
 #region Initialize Boards
 #setup camera
