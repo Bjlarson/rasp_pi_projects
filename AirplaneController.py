@@ -6,6 +6,7 @@ import serial
 import pynmea2
 import math
 import PiCamera
+import json
 import RPi.GPIO as GPIO
 from adafruit_servokit import ServoKit
 
@@ -18,20 +19,27 @@ rudderPort = 0
 motorPort = 2
 motorMax = 180
 motorMin = 20
-
-#takeoff Variables
+mode = "stop"
 takeoffSpeed = 20.0
+currentWaypoint = 0
+pathpoints = []
 #endregion
 
 
 #region Airplane class
 #airplane Data Class
 class Airplane:
-    def __init__(self, elevatorAngle, rudderAngle, motorSpeed, startingAlt):
+    def __init__(self, elevatorAngle, rudderAngle, motorSpeed, startingAlt, lastAlt, LastLat, LastLong, lastRate, lastSpeed, mode):
         self.elevatorAngle = elevatorAngle
         self.rudderAngle = rudderAngle
         self.motorSpeed = motorSpeed
         self.startingAlt = startingAlt
+        self.lastAlt = lastAlt
+        self.lastLat = LastLat
+        self.lastLong = LastLong
+        self.lastRate = lastRate
+        self.lastSpeed = lastSpeed
+        self.mode = mode
 #endregion
 
 #region altimeter setup - Variables
@@ -274,12 +282,12 @@ def get_z_pitch():
 def log_message(message):
     current_time = datetime.datetime.now()
 
-    with open('FlightLog.txt', 'a') as log_file:
+    with open(current_time.strftime("%Y-%m-%d")+'FlightLog.txt', 'a') as log_file:
         log_file.write('Time: ' + current_time.strftime("%Y-%m-%d %H:%M:%S") + '  message: ' + message + '\n')
 
 #take a picture
 def take_Pic_and_save(camera, FileName):
-    fileLocationAndName = pictureLocation + FileName + current_time.strftime("%Y-%m-%d %H:%M:%S") + ".jpg"
+    fileLocationAndName = pictureLocation + FileName + current_time.strftime("%Y-%m-%d-%H-%M-%S") + ".jpg"
     camera.capture(fileLocationAndName)
     log_message("Picture Taken: " + FileName + current_time.strftime("%Y-%m-%d %H:%M:%S"))
 
@@ -290,6 +298,11 @@ def send_message(client_socket, message):
 #waits for a message from the clienadded comments
 def receive_message(client_socket):
     return client_socket.recv(1024)
+
+#decerialize path points from message
+def decerialize_points(client_socket):
+    points = receive_message(client_socket)
+    return json.loads(points)
      
 #endregion
 
@@ -338,8 +351,37 @@ def check_can_takeoff(speed):
     return speed > takeoffSpeed
 
 #checks if we have a higher altitude than starting point
-def Check_has_takenoff(altitude):
-    return altitude > startingAlt
+def Check_has_takenoff(altitude, speed ,airplane):
+    global mode
+    mode = "normal"
+    airplane.mode = "normal"
+    log_message("Took Off at speed of " + str(speed))
+    return altitude > startingAlt + 1
+#endregion
+
+#region stall methods
+#check if the speed has increase
+def Has_speed_increased(lastSpeed, currentSpeed, pitch, airplane):
+    airplane.lastSpeed = currentSpeed
+    return currentSpeed >= lastSpeed
+
+#change elevator and motor to get out of a stall direction is for trying to go up or down
+def Recover(airplane, kit, direction):
+    if(direction == True ):
+        Set_Elevator(kit, airplane.elevator + .02, airplane)
+    else:
+        Set_Elevator(kit, airplane.elevator - .02, airplane)
+
+#Has recovered from a stall to go back to normal flight
+def Has_Recoverd(lastSpeed, currentSpeed, pitch, airplane):
+    global mode
+    if(currentSpeed >= lastSpeed & pitch >= 0):
+        log_message("recovered from stall")
+        mode = airplane.mode
+        return True
+    
+    log_message("Last Speed: " + str(lastSpeed) + " Current Speed: " + str(currentSpeed) + " Pitch: " + str(pitch))
+    return False
 #endregion
 
 #region Normal flight methods
@@ -349,7 +391,7 @@ def FeetPerMin(CurrentAltimeter,LastAltimeter,curTime,lastT):
 #get the climb or decent rate
 def DetermineClimbDesentRate(endAlt, startAlt, MPH, MilesToAlt):
     targetFPM = (endAlt - startAlt)/(MPH/MilesToAlt)
-    log_message("target feet per min " + targetFPM)
+    log_message("target feet per min " + str(targetFPM))
     return targetFPM
     
 #set Elevators and engine to meet the rate of climb
@@ -383,7 +425,7 @@ def Set_throttle(kit, speed, airplane):
     elif(speed < 0):
         speed = 0
     kit.servo[motorPort].angle(speed)
-    log_message("motor speed set to " + speed)
+    log_message("motor speed set to " + str(speed))
     airplane.motorSpeed = speed
 
 #set a rudder location between 0 and 180
@@ -393,7 +435,7 @@ def Set_Rudder(kit, angle, airplane):
     elif(angle < 0):
         angle = 0
     kit.servo[rudderPort].angle(angle)
-    log_message("set rudder to " + angle)
+    log_message("set rudder to " + str(angle))
     airplane.rudderAngle = angle 
 
 #set a elevator postition between -1 or 1
@@ -407,7 +449,7 @@ def Set_Elevator(kit, angle, airplane):
         kit.servo[elevatorPort].angle(abs(angle) * 90)
     else:
         kit.servo[elevatorPort].angle((angle*90) + 90)  
-    log_message("set elevator to " + (abs(angle) * 90))
+    log_message("set elevator to " + str((abs(angle) * 90)))
     airplane.elevatorAngle = angle
 
 #Check out current direction and move towards point
@@ -420,21 +462,36 @@ def Move_Towards_target(TargetLat, TargetLong, CurrentLat, CurrentLong, LastLat,
 
 #Check if we are in a stall
 def Check_If_Stalling(currentRate, LastRate, TargetRate, pitch):
+    global mode
     if(pitch > 45 & currentRate < LastRate & currentRate < TargetRate):
-        log_message("Current: " + currentRate + " Last: " + LastRate + " Target: " + TargetRate + " pitch: " + pitch)
+        log_message("Stall with values - Current: " + str(currentRate) + " Last: " + str(LastRate) + " Target: " + str(TargetRate) + " pitch: " + str(pitch))
+        mode = "stall"
         return True
 
 
 #Check if we have reacehed a waypoint to determin if we are within 1ft from the destination
 def Have_Reached_Waypoint(TargetLat, TargetLong, currentLat, currentLong, altitude, targetAltitude):
+    global currentWaypoint
     miles = miles_between_two_points(TargetLat, TargetLong, currentLat, currentLong)
     if ((miles*5280) <= 1 & abs(altitude - targetAltitude) < 10):
-        #increment to next way point
+        log_message("Reached Waypoint")
+        currentWaypoint += 1  
         return True
     return False
 
-#set
 #endregion
+
+#region Slow Flight
+#control speed with pitch
+def Slow_Flight_Speed(currentSpeed, targetSpeed, kit, airplane):
+    if(currentSpeed < targetSpeed):
+        Set_Elevator(kit, airplane.elevatorAngle - .01, airplane)
+    elif(currentSpeed > targetSpeed):
+        Set_Elevator(kit, airplane.elevatorAngle + .01, airplane)
+
+#control decent rate with motor speed
+def Slow_Flight_Decent(currentRate, targetRate, kit, airplane):
+
 
 #region Initialize Boards
 #setup camera
