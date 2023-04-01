@@ -363,11 +363,6 @@ def Check_has_takenoff(altitude, speed ,airplane):
 #endregion
 
 #region stall methods
-#check if the speed has increase
-def Has_speed_increased(lastSpeed, currentSpeed, pitch, airplane):
-    airplane.lastSpeed = currentSpeed
-    return currentSpeed >= lastSpeed
-
 #change elevator and motor to get out of a stall direction is for trying to go up or down
 def Recover(airplane, kit, direction):
     if(direction == True ):
@@ -378,6 +373,8 @@ def Recover(airplane, kit, direction):
 #Has recovered from a stall to go back to normal flight
 def Has_Recoverd(lastSpeed, currentSpeed, pitch, airplane):
     global mode
+    airplane.lastspeed = currentSpeed
+
     if(currentSpeed >= lastSpeed & pitch >= 0):
         log_message("recovered from stall")
         mode = airplane.mode
