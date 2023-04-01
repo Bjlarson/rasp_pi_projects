@@ -29,11 +29,12 @@ pathpoints = []
 #region Airplane class
 #airplane Data Class
 class Airplane:
-    def __init__(self, elevatorAngle, rudderAngle, motorSpeed, startingAlt, lastAlt, LastLat, LastLong, lastRate, lastSpeed, mode):
+    def __init__(self, elevatorAngle, rudderAngle, motorSpeed, startingAlt, lastPitch, lastAlt, LastLat, LastLong, lastRate, lastSpeed, mode):
         self.elevatorAngle = elevatorAngle
         self.rudderAngle = rudderAngle
         self.motorSpeed = motorSpeed
         self.startingAlt = startingAlt
+        self.lastPitch = lastPitch
         self.lastAlt = lastAlt
         self.lastLat = LastLat
         self.lastLong = LastLong
@@ -350,30 +351,45 @@ def stop(client_socket, kit): #This will stop every action your Pi is performing
 
 #region takeoff Methods
 #determins if we can takeoff at current speed
-def check_can_takeoff(speed):
+def check_can_takeoff(speed, airplane):
+    airplane.lastSpeed = speed
+    log_message("speed: " + str(speed))
     return speed > takeoffSpeed
 
 #checks if we have a higher altitude than starting point
 def Check_has_takenoff(altitude, speed ,airplane):
     global mode
     mode = "normal"
+
     airplane.mode = "normal"
+    airplane.lastSpeed = speed
+
     log_message("Took Off at speed of " + str(speed))
     return altitude > startingAlt + 1
 #endregion
 
 #region stall methods
-#change elevator and motor to get out of a stall direction is for trying to go up or down
-def Recover(airplane, kit, direction):
-    if(direction == True ):
+#Checks if speed has gone up to see if we should continue to go down or start to pull up
+def Has_Speed_Increased(currentSpeed, lastSpeed, airplane):
+    airplane.lastSpeed = currentSpeed
+    
+    return currentSpeed > lastSpeed
+
+#change elevator and motor to get out of a stall CanGoUp is for trying to go up(true) or down(False)
+def Recover(airplane, kit, CanGoUp):
+    if(CanGoUp == True ):
+        log_message("Can increase pitch")
         Set_Elevator(kit, airplane.elevator + .02, airplane)
     else:
+        log_message("Need to decrease pitch")
         Set_Elevator(kit, airplane.elevator - .02, airplane)
 
 #Has recovered from a stall to go back to normal flight
 def Has_Recoverd(lastSpeed, currentSpeed, pitch, airplane):
     global mode
-    airplane.lastspeed = currentSpeed
+    airplane.lastPitch = pitch
+
+    log_message("pitch: " + str(pitch) + " Speed: " + str(currentSPeed))
 
     if(currentSpeed >= lastSpeed & pitch >= 0):
         log_message("recovered from stall")
@@ -389,6 +405,7 @@ def Should_Emergency_Land(altitude, TargetAlt, startingAlt, airplane):
     if( altitude <= startingAlt + 10 or altitude < TargetAlt - 150):
         airplane.mode = "land"
         mode = "land"
+        log_message("Emergancy Landing - Alt: " + str(altitude) + " Starting Altitude: " + str(startingAlt) + " Target Altitude: " + str(TargetAlt))
         return True
     
     return False
@@ -402,7 +419,6 @@ def FeetPerMin(CurrentAltimeter,LastAltimeter,curTime,lastT):
 #get the climb or decent rate
 def DetermineClimbDesentRate(endAlt, startAlt, MPH, MilesToAlt):
     targetFPM = (endAlt - startAlt)/(MPH/MilesToAlt)
-    log_message("target feet per min " + str(targetFPM))
     return targetFPM
     
 #set Elevators and engine to meet the rate of climb
@@ -410,21 +426,30 @@ def Set_Elevators_Engine_To_ROC(lastAlt, currentAlt, targetAlt, MPH, milesToAlt,
     currentRate = DetermineClimbDesentRate(currentAlt, lastAlt, MPH, distLastTraveled)
     targetRate = DetermineClimbDesentRate(targetAlt, currentAlt, MPH, milesToAlt)
 
+    log_message("target feet per min: " + str(targetRate) + " current feet per min: " + str(currentRate))
+
+    airplane.lastRate = currentRate
+    airplane.lastAlt = currentAlt
+
     if (currentRate < targetRate):
         if(currentRate >= 800):
             return
         
         if(abs(currentRate - targetRate) < 100):
+            log_message("Slow Incline: " + str(abs(currentRate - targetRate)))
             Set_Elevator(kit, (airplane.elevatorAngle + .05), airplane)
             Set_throttle(kit, (airplane.motorSpeed + 5), airplane)
         else:
+            log_message("Large Incline: " + str(abs(currentRate - targetRate)))
             Set_Elevator(kit, (airplane.elevatorAngle + .1), airplane)
             Set_throttle(kit, (airplane.motorSpeed + 10), airplane)
     elif(currentRate > targetRate):
         if(abs(currentRate - targetRate) < 100):
+            log_message("Slow Decline: " + str(abs(currentRate - targetRate)))
             Set_Elevator(kit, (airplane.elevatorAngle - .05), airplane)
             Set_throttle(kit, (airplane.motorSpeed - 5), airplane)
         else:
+            log_message("Large Decline: " + str(abs(currentRate - targetRate)))
             Set_Elevator(kit, (airplane.elevatorAngle - .1), airplane)
             Set_throttle(kit, (airplane.motorSpeed - 10), airplane)
 
@@ -469,6 +494,11 @@ def Move_Towards_target(TargetLat, TargetLong, CurrentLat, CurrentLong, LastLat,
     targetDirection = determin_direction_from_two_points(CurrentLat, CurrentLong, TargetLat, TargetLong)
 
     turnAngle = determin_best_turn_to_point(CurrentDirection, targetDirection)
+
+    airplane.lastLat = CurrentLat
+    airplane.lastLong = CurrentLong
+
+    log_message("Turn Angle: " + str(turnAngle) + "Current Direction: " + str(CurrentDirection) + "Target Direction" + str(targetDirection))
     Set_Rudder(kit, turnAngle, airplane)
 
 #Check if we are in a stall
@@ -484,6 +514,7 @@ def Check_If_Stalling(currentRate, LastRate, TargetRate, pitch):
 def Have_Reached_Waypoint(TargetLat, TargetLong, currentLat, currentLong, altitude, targetAltitude):
     global currentWaypoint
     miles = miles_between_two_points(TargetLat, TargetLong, currentLat, currentLong)
+
     if ((miles*5280) <= 1 & abs(altitude - targetAltitude) < 10):
         log_message("Reached Waypoint")
         currentWaypoint += 1  
@@ -495,16 +526,27 @@ def Have_Reached_Waypoint(TargetLat, TargetLong, currentLat, currentLong, altitu
 #region Slow Flight
 #control speed with pitch
 def Slow_Flight_Speed(currentSpeed, targetSpeed, kit, airplane):
+    airplane.lastSpeed = currentSpeed
     if(currentSpeed < targetSpeed):
+        log_message("Slow Flight decreasing angle at speed: " + str(currentSpeed))
         Set_Elevator(kit, airplane.elevatorAngle - .01, airplane)
     elif(currentSpeed > targetSpeed):
+        log_message("Slow Flight increasing angle at speed: " + str(currentSpeed))
         Set_Elevator(kit, airplane.elevatorAngle + .01, airplane)
 
 #control decent rate with motor speed
-def Slow_Flight_Decent(currentRate, targetRate, kit, airplane):
+def Slow_Flight_Decent(CurrentAlt, LastAlt, MPH, targetRate, distToTarget, kit, airplane):
+    currentRate = DetermineClimbDesentRate(CurrentAlt, LastAlt, MPH, distToTarget)
+    
+    airplane.lastRate = currentRate
+    airplane.lastspeed = MPH
+    airplane.LastAlt = CurrentAlt
+
     if(currentRate > targetRate):
+        log_message("Slow Flight increasing motor speed. Rate of Change: " + str(currentRate))
         Set_throttle(kit, airplane.motorSpeed + 5, airplane)
     elif(currentRate < targetRate):
+        log_message("Slow Flight decreasing motor speed. Rate of Change: " + str(currentRate))
         Set_throttle(kit, airplane.motorSpeed - 1, airplane)
 
 #checks if we are close enough to the landing point to start the landing and shutdown process
@@ -513,6 +555,7 @@ def Should_Land(currentAlt, DistToTarget, TargetAlt, airplane):
     if(currentAlt <= TargetAlt + 2 & DistToTarget <= 10):
         mode = "land"
         airplane.mode = "land"
+        log_message("Switch to Landing")
         return True
     
     return False
@@ -522,9 +565,12 @@ def Should_Land(currentAlt, DistToTarget, TargetAlt, airplane):
 #region Landing Methods
 #Keep pitch level
 def Keep_Pitch_Level(Pitch, kit, airplane):
+    airplane.lastPitch = Pitch
     if (Pitch > 0):
+        log_message("Lower Elevator to level out - Pitch: " + str(Pitch))
         Set_Elevator(kit, airplane.elevatorAngle - .01)
     elif(Pitch < 0):
+        log_message("Raise Elevator to level out - Pitch: " + str(Pitch))
         Set_Elevator(kit, airplane.elevatorAngle + .01)
 
 #keep Landing heading
@@ -562,9 +608,6 @@ plane = Airplane(0, 90, 0, mpl3115a2.read_alt())
 
 # create a new file and immediately close it to clear previous data
 open('Altimeter.txt', 'w').close()
-
-#arm ESC
-kit.servo[motorPort].angle = 0
 
 # setup connection with bluetooth
 server_socket = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
