@@ -14,6 +14,7 @@ from adafruit_servokit import ServoKit
 #Location Variables
 portNumber = 1
 pictureLocation = "/home/blake/Documents/FlightPics/"
+gpsPort="/dev/ttyAMA0"
 elevatorPort = 1
 rudderPort = 0
 motorPort = 2
@@ -157,6 +158,21 @@ class MPL3115A2:
 #endregion
 
 #region GPS Methods
+#Gets Latitude and Longitude
+def Get_Cordinates():
+    ser = serial.Serial(gpsPort, baudrate=9600, timeout=0.5)
+    dataout = pynmea2.NMEAStreamReader()
+    newdata = ser.readline()
+
+    if newdata[0:6] == b"$GPRMC":
+        newmsg = pynmea2.parse(newdata.decode("utf-8"))
+        lat = newmsg.latitude
+        lng = newmsg.longitude
+        
+        return (lat, lng)
+
+    return (0.0,0.0)
+
 #determin the amount of miles based on two latitudes and longitudes
 def miles_between_two_points(lat1, long1, lat2, long2):
     """Calculate distance in miles between two points on Earth."""
@@ -331,7 +347,8 @@ def Calibrate(client_socket, kit):
             time.sleep(1)
             send_message(client_socket, "Calibration Complete")
 
-def arm(client_socket, kit): #This is the arming procedure of an ESC 
+#This is the arming procedure of an ESC 
+def arm(client_socket, kit): 
     send_message(client_socket, 'Connect the battery and send c input')
     recipt = receive_message(client_socket)
     if recipt == 'c':
@@ -341,8 +358,34 @@ def arm(client_socket, kit): #This is the arming procedure of an ESC
         time.sleep(1)
         kit.servo[motorPort].angle = motorMin  
         time.sleep(1) 
-        
-def stop(client_socket, kit): #This will stop every action your Pi is performing for ESC ofcourse.
+
+#Preflight test gets Latitude and Longitude and altitude and send that back to the user it also checks that all flight controls are able to move the full range of motion
+def Preflight_Check(client_socket, altimeter, kit, airplane):
+    Latitude, Longitude = Get_Cordinates()
+    Altitude, Celceus, Farenheight = altimeter.read_alt_temp()
+
+    log_message(str(Latitude) + ", " + str(Longitude) + " - Alt: " + str(Altitude) + " temp: " + str(Celceus) + "C, " + str(Farenheight) + "F")  
+    send_message(client_socket, str(Latitude) + ", " + str(Longitude) + " - Alt: " + str(Altitude) + " temp: " + str(Celceus) + "C, " + str(Farenheight) + "F")
+
+    send_message(client_socket, 'Be awair motor will start block wheels and send c input to continue')
+    recipt = receive_message(client_socket)
+    if (recipt == 'c'):
+        i = 0
+        while True:
+            if(i < 180):
+                Set_Elevator(kit, i, airplane)
+                Set_Rudder(kit, i, airplane)
+                if(i > 20):
+                    Set_throttle(kit, speed, airplane)
+            else:
+                Set_Elevator(kit, 0, airplane)
+                Set_Rudder(kit, 90, airplane)
+                Set_throttle(kit, 0, airplane)
+                break
+
+
+#This will stop every action your Pi is performing for ESC ofcourse.
+def stop(client_socket, kit): 
     log_message("stoped")
     kit.servo[motorPort].angle = 0
     kit.servo[elevatorPort].angle = 90
@@ -521,6 +564,17 @@ def Have_Reached_Waypoint(TargetLat, TargetLong, currentLat, currentLong, altitu
         return True
     return False
 
+#check if we are on final
+def On_Final(airplane):
+    global mode
+    if(len(pathpoints) - 1 == currentWaypoint):
+        mode = "slow"
+        airplane.Mode = "slow"
+        log_message("Slow Flight")
+        return True
+
+    return False
+        
 #endregion
 
 #region Slow Flight
@@ -606,22 +660,39 @@ MPU_Init()
 plane = Airplane(0, 90, 0, mpl3115a2.read_alt())
 #endregion
 
-# create a new file and immediately close it to clear previous data
-open('Altimeter.txt', 'w').close()
-
 # setup connection with bluetooth
 server_socket = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
 server_socket.bind(("", bluetooth.PORT_ANY))
 server_socket.listen(portNumber)
 
 port = server_socket.getsockname()[1]
-print("Waiting for connection on RFCOMM channel", port)
+log_message("Waiting for connection on RFCOMM channel " + port)
 
 # try to connect and start listening to stream
 client_socket, client_address = server_socket.accept()
-print("Accepted connection from", client_address)
+log_message("Accepted connection from " + client_address)
+
+send_message(client_socket, "Send Flight Path")
+pathpoints = decerialize_points(client_socket)
 
 while True:
+    send_message(client_socket, "Send Mode: stop, calibrate, arm, preflight, takeoff")
+    mode = receive_message(client_socket)
+
+    match mode:
+        case "calibrate":
+            Calibrate(client_socket, kit)
+            send_message(client_socket, "Send Mode: stop, calibrate, arm, preflight, takeoff")
+            mode = receive_message(client_socket)
+        case "arm":
+            arm(client_socket, kit)
+            send_message(client_socket, "Send Mode: stop, calibrate, arm, preflight, takeoff")
+            mode = receive_message(client_socket)
+        case "preflight":
+            Preflight_Check(client_socket, mpl3115a2, kit, plane)()
+            send_message(client_socket, "Send Mode: stop, calibrate, arm, preflight, takeoff")
+            mode = receive_message(client_socket)
+
     message = input()
     client_socket.send(message)
     recipt = client_socket.recv(1024)
