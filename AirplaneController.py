@@ -1,6 +1,7 @@
 import bluetooth
 import datetime
 import smbus
+import datetime
 import time
 import serial
 import pynmea2
@@ -30,7 +31,7 @@ pathpoints = []
 #region Airplane class
 #airplane Data Class
 class Airplane:
-    def __init__(self, elevatorAngle, rudderAngle, motorSpeed, startingAlt, lastPitch, lastAlt, LastLat, LastLong, lastRate, lastSpeed, mode):
+    def __init__(self, elevatorAngle, rudderAngle, motorSpeed, startingAlt, lastPitch, lastAlt, LastLat, LastLong, lastRate, lastSpeed, lastTime, mode):
         self.elevatorAngle = elevatorAngle
         self.rudderAngle = rudderAngle
         self.motorSpeed = motorSpeed
@@ -41,6 +42,7 @@ class Airplane:
         self.lastLong = LastLong
         self.lastRate = lastRate
         self.lastSpeed = lastSpeed
+        self.lastTime = lastTime
         self.mode = mode
 #endregion
 
@@ -653,11 +655,11 @@ kit = ServoKit(channels = 8)
 Altbus = smbus.SMBus(3)
 
 #initialize Gyro
-Gyrobus = smbus.SMBus(2) 	# or bus = smbus.SMBus(0) for older version boards
+Gyrobus = smbus.SMBus(2)
 MPU_Init()
 
 #initialize airplane variables
-plane = Airplane(0, 90, 0, mpl3115a2.read_alt())
+plane = Airplane(0, 90, 0, mpl3115a2.read_alt(), get_x_pitch(), mpl3115a2.read_alt(), Get_Cordinates().lat, Get_Cordinates().lng, 0, 0, datetime.datetime.now(), "stop")
 #endregion
 
 # setup connection with bluetooth
@@ -675,10 +677,10 @@ log_message("Accepted connection from " + client_address)
 send_message(client_socket, "Send Flight Path")
 pathpoints = decerialize_points(client_socket)
 
-while True:
-    send_message(client_socket, "Send Mode: stop, calibrate, arm, preflight, takeoff")
-    mode = receive_message(client_socket)
+send_message(client_socket, "Send Mode: stop, calibrate, arm, preflight, takeoff")
+mode = receive_message(client_socket)
 
+while True:
     match mode:
         case "calibrate":
             Calibrate(client_socket, kit)
@@ -692,8 +694,7 @@ while True:
             Preflight_Check(client_socket, mpl3115a2, kit, plane)()
             send_message(client_socket, "Send Mode: stop, calibrate, arm, preflight, takeoff")
             mode = receive_message(client_socket)
-
-    message = input()
-    client_socket.send(message)
-    recipt = client_socket.recv(1024)
-    print(recipt)
+        case "takeoff":
+            Set_throttle(kit, 180, plane)
+            cLat, cLng = Get_Cordinates()
+            check_can_takeoff(miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime), plane)
