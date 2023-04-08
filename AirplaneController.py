@@ -378,7 +378,7 @@ def Preflight_Check(client_socket, altimeter, kit, airplane):
                 Set_Elevator(kit, i, airplane)
                 Set_Rudder(kit, i, airplane)
                 if(i > 20):
-                    Set_throttle(kit, speed, airplane)
+                    Set_throttle(kit, i, airplane)
             else:
                 Set_Elevator(kit, 0, airplane)
                 Set_Rudder(kit, 90, airplane)
@@ -404,13 +404,13 @@ def check_can_takeoff(speed, airplane):
 #checks if we have a higher altitude than starting point
 def Check_has_takenoff(altitude, speed ,airplane):
     global mode
-    mode = "normal"
+    if(altitude > startingAlt + 1):
+        mode = "normal"
 
-    airplane.mode = "normal"
-    airplane.lastSpeed = speed
+        airplane.mode = "normal"
+        airplane.lastSpeed = speed
 
-    log_message("Took Off at speed of " + str(speed))
-    return altitude > startingAlt + 1
+        log_message("Took Off at speed of " + str(speed))
 #endregion
 
 #region stall methods
@@ -434,7 +434,7 @@ def Has_Recoverd(lastSpeed, currentSpeed, pitch, airplane):
     global mode
     airplane.lastPitch = pitch
 
-    log_message("pitch: " + str(pitch) + " Speed: " + str(currentSPeed))
+    log_message("pitch: " + str(pitch) + " Speed: " + str(currentSpeed))
 
     if(currentSpeed >= lastSpeed & pitch >= 0):
         log_message("recovered from stall")
@@ -697,4 +697,38 @@ while True:
         case "takeoff":
             Set_throttle(kit, 180, plane)
             cLat, cLng = Get_Cordinates()
-            check_can_takeoff(miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime), plane)
+            Move_Towards_target(pathpoints[currentWaypoint].lat, pathpoints[currentWaypoint].lng, cLat, cLng, plane.lastLat, plane.lastLong, kit, plane)
+            if(check_can_takeoff(miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime), plane)):
+                Set_Elevator(kit, 0, plane)
+            
+            Check_has_takenoff(mpl3115a2.read_alt(),miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime))
+        case "normal":
+            Set_throttle(kit, 150, plane)
+            cLat, cLng = Get_Cordinates()
+            Set_Elevators_Engine_To_ROC(
+                plane.lastAlt, 
+                mpl3115a2.read_alt(), 
+                pathpoints[currentWaypoint].alt, 
+                miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime), 
+                miles_between_two_points(cLat, cLng, pathpoints[currentWaypoint].lat, pathpoints[currentWaypoint].lng), 
+                miles_between_two_points(plane.lastLat, plane.lastLong, cLat, cLng), 
+                plane)
+            Move_Towards_target(pathpoints[currentWaypoint].lat, pathpoints[currentWaypoint].lng, cLat, cLng, plane.lastLat, plane.lastLong, kit, plane)
+            Have_Reached_Waypoint(pathpoints[currentWaypoint].lat, pathpoints[currentWaypoint].lng, cLat, cLng, mpl3115a2.read_alt(), pathpoints[currentWaypoint].alt)
+            Check_If_Stalling(
+                DetermineClimbDesentRate(
+                    mpl3115a2.read_alt(), 
+                    plane.lastAlt, 
+                    miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime), 
+                    miles_between_two_points(plane.lastLat, plane.lastLong, cLat, cLng)), 
+                DetermineClimbDesentRate(
+                    pathpoints[currentWaypoint].alt, 
+                    mpl3115a2.read_alt(), 
+                    miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime), 
+                    miles_between_two_points(cLat, cLng, pathpoints[currentWaypoint].lat, pathpoints[currentWaypoint].lng)),
+                plane.lastRate, 
+                get_y_pitch())
+            On_Final(plane)
+        case "slow":
+            Set_throttle(kit, 120, plane)
+
