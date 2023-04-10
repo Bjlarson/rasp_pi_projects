@@ -706,6 +706,7 @@ while True:
             Check_has_takenoff(mpl3115a2.read_alt(),miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime))
         case "normal":
             Set_throttle(kit, 150, plane)
+            take_Pic_and_save(camera, pictureLocation)
             cLat, cLng = Get_Cordinates()
             Set_Elevators_Engine_To_ROC(
                 plane.lastAlt, 
