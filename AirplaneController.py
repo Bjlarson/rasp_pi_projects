@@ -770,6 +770,7 @@ while True:
             Keep_Pitch_Level(get_x_pitch, kit, plane)
             Has_Landed(mpl3115a2.read_alt(), pathpoints[currentWaypoint].alt)
         case "stall":
+            take_Pic_and_save(camera, pictureLocation)
             Recover(
                 plane, 
                 kit, 
