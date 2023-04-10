@@ -702,6 +702,7 @@ while True:
             if(check_can_takeoff(miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime), plane)):
                 Set_Elevator(kit, 0, plane)
             
+            take_Pic_and_save(camera, pictureLocation)
             Check_has_takenoff(mpl3115a2.read_alt(),miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime))
         case "normal":
             Set_throttle(kit, 150, plane)
