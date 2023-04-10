@@ -31,7 +31,7 @@ pathpoints = []
 #region Airplane class
 #airplane Data Class
 class Airplane:
-    def __init__(self, elevatorAngle, rudderAngle, motorSpeed, startingAlt, lastPitch, lastAlt, LastLat, LastLong, lastRate, lastSpeed, lastTime, mode):
+    def __init__(self, elevatorAngle, rudderAngle, motorSpeed, startingAlt, lastPitch, lastAlt, LastLat, LastLong, lastRate, lastSpeed, lastTime, landDirection, mode):
         self.elevatorAngle = elevatorAngle
         self.rudderAngle = rudderAngle
         self.motorSpeed = motorSpeed
@@ -43,6 +43,7 @@ class Airplane:
         self.lastRate = lastRate
         self.lastSpeed = lastSpeed
         self.lastTime = lastTime
+        self.landDirection = landDirection
         self.mode = mode
 #endregion
 
@@ -659,7 +660,7 @@ Gyrobus = smbus.SMBus(2)
 MPU_Init()
 
 #initialize airplane variables
-plane = Airplane(0, 90, 0, mpl3115a2.read_alt(), get_x_pitch(), mpl3115a2.read_alt(), Get_Cordinates().lat, Get_Cordinates().lng, 0, 0, datetime.datetime.now(), "stop")
+plane = Airplane(0, 90, 0, mpl3115a2.read_alt(), get_x_pitch(), mpl3115a2.read_alt(), Get_Cordinates().lat, Get_Cordinates().lng, 0, 0, datetime.datetime.now(), 0, "stop")
 #endregion
 
 # setup connection with bluetooth
@@ -721,14 +722,66 @@ while True:
                     plane.lastAlt, 
                     miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime), 
                     miles_between_two_points(plane.lastLat, plane.lastLong, cLat, cLng)), 
+                plane.lastRate,
+                DetermineClimbDesentRate(
+                    pathpoints[currentWaypoint].alt, 
+                    mpl3115a2.read_alt(), 
+                    miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime), 
+                    miles_between_two_points(cLat, cLng, pathpoints[currentWaypoint].lat, pathpoints[currentWaypoint].lng)), 
+                get_y_pitch())
+            On_Final(plane)
+        case "slow":
+            Set_throttle(kit, 120, plane)
+            cLat, cLng = Get_Cordinates()
+            Move_Towards_target(pathpoints[currentWaypoint].lat, pathpoints[currentWaypoint].lng, cLat, cLng, plane.lastLat, plane.lastLong, kit, plane)
+            Slow_Flight_Decent(
+                mpl3115a2.read_alt(),
+                plane.lastAlt,
+                miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime),
                 DetermineClimbDesentRate(
                     pathpoints[currentWaypoint].alt, 
                     mpl3115a2.read_alt(), 
                     miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime), 
                     miles_between_two_points(cLat, cLng, pathpoints[currentWaypoint].lat, pathpoints[currentWaypoint].lng)),
-                plane.lastRate, 
-                get_y_pitch())
-            On_Final(plane)
-        case "slow":
-            Set_throttle(kit, 120, plane)
-
+                kit,
+                plane
+            )
+            Slow_Flight_Speed(
+                miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime),
+                50,
+                kit,
+                plane
+            )
+            Should_Land(
+                mpl3115a2.read_alt(),
+                miles_between_two_points(cLat, cLng, pathpoints[currentWaypoint].lat, pathpoints[currentWaypoint].lng),
+                pathpoints[currentWaypoint].alt,
+                plane
+            )
+        case "land":
+            Set_throttle(kit, plane.motorSpeed - 5, plane)
+            cLat, cLng = Get_Cordinates()
+            Keep_Landing_Heading(
+                determin_direction_from_two_points(plane.lastLat, plane.lastLong, cLat, cLng),
+                determin_direction_from_two_points(pathpoints[currentWaypoint-1].lat, pathpoints[currentWaypoint-1].lng, pathpoints[currentWaypoint].lat, pathpoints[currentWaypoint].lng),
+                kit,
+                plane
+            )
+            Keep_Pitch_Level(get_x_pitch, kit, plane)
+            Has_Landed(mpl3115a2.read_alt(), pathpoints[currentWaypoint].alt)
+        case "stall":
+            Recover(
+                plane, 
+                kit, 
+                Has_Speed_Increased(
+                    miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime),
+                    plane.lastSpeed,
+                    plane
+                    )
+                )
+            Has_Recoverd(
+                plane.lastSpeed, 
+                miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime), 
+                get_y_pitch, 
+                plane)
+            Should_Emergency_Land(mpl3115a2.read_alt(), pathpoints[currentWaypoint].alt, plane.startingAlt, plane)
