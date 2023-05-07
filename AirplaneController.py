@@ -682,96 +682,95 @@ send_message(client_socket, "Send Mode: stop, calibrate, arm, preflight, takeoff
 mode = receive_message(client_socket)
 
 while True:
-    match mode:
-        case "calibrate":
-            Calibrate(client_socket, kit)
-            send_message(client_socket, "Send Mode: stop, calibrate, arm, preflight, takeoff")
-            mode = receive_message(client_socket)
-        case "arm":
-            arm(client_socket, kit)
-            send_message(client_socket, "Send Mode: stop, calibrate, arm, preflight, takeoff")
-            mode = receive_message(client_socket)
-        case "preflight":
-            Preflight_Check(client_socket, mpl3115a2, kit, plane)()
-            send_message(client_socket, "Send Mode: stop, calibrate, arm, preflight, takeoff")
-            mode = receive_message(client_socket)
-        case "takeoff":
-            Set_throttle(kit, 180, plane)
-            cLat, cLng = Get_Cordinates()
-            Move_Towards_target(pathpoints[currentWaypoint].lat, pathpoints[currentWaypoint].lng, cLat, cLng, plane.lastLat, plane.lastLong, kit, plane)
-            if(check_can_takeoff(miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime), plane)):
-                Set_Elevator(kit, 0, plane)
+    if(mode == "calibrate"):
+        Calibrate(client_socket, kit)
+        send_message(client_socket, "Send Mode: stop, calibrate, arm, preflight, takeoff")
+        mode = receive_message(client_socket)
+    elif(mode == "arm"):
+        arm(client_socket, kit)
+        send_message(client_socket, "Send Mode: stop, calibrate, arm, preflight, takeoff")
+        mode = receive_message(client_socket)
+    elif(mode == "preflight"):
+        Preflight_Check(client_socket, mpl3115a2, kit, plane)()
+        send_message(client_socket, "Send Mode: stop, calibrate, arm, preflight, takeoff")
+        mode = receive_message(client_socket)
+    elif(mode == "takeoff"):
+        Set_throttle(kit, 180, plane)
+        cLat, cLng = Get_Cordinates()
+        Move_Towards_target(pathpoints[currentWaypoint].lat, pathpoints[currentWaypoint].lng, cLat, cLng, plane.lastLat, plane.lastLong, kit, plane)
+        if(check_can_takeoff(miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime), plane)):
+            Set_Elevator(kit, 0, plane)
             
-            take_Pic_and_save(camera, pictureLocation)
-            Check_has_takenoff(mpl3115a2.read_alt(),miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime))
-        case "normal":
-            Set_throttle(kit, 150, plane)
-            take_Pic_and_save(camera, pictureLocation)
-            cLat, cLng = Get_Cordinates()
-            Set_Elevators_Engine_To_ROC(
-                plane.lastAlt, 
+        take_Pic_and_save(camera, pictureLocation)
+        Check_has_takenoff(mpl3115a2.read_alt(),miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime))
+    elif(mode == "normal"):
+        Set_throttle(kit, 150, plane)
+        take_Pic_and_save(camera, pictureLocation)
+        cLat, cLng = Get_Cordinates()
+        Set_Elevators_Engine_To_ROC(
+            plane.lastAlt, 
+            mpl3115a2.read_alt(), 
+            pathpoints[currentWaypoint].alt, 
+            miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime), 
+            miles_between_two_points(cLat, cLng, pathpoints[currentWaypoint].lat, pathpoints[currentWaypoint].lng), 
+            miles_between_two_points(plane.lastLat, plane.lastLong, cLat, cLng), 
+            plane)
+        Move_Towards_target(pathpoints[currentWaypoint].lat, pathpoints[currentWaypoint].lng, cLat, cLng, plane.lastLat, plane.lastLong, kit, plane)
+        Have_Reached_Waypoint(pathpoints[currentWaypoint].lat, pathpoints[currentWaypoint].lng, cLat, cLng, mpl3115a2.read_alt(), pathpoints[currentWaypoint].alt)
+        Check_If_Stalling(
+            DetermineClimbDesentRate(
                 mpl3115a2.read_alt(), 
-                pathpoints[currentWaypoint].alt, 
+                plane.lastAlt, 
                 miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime), 
-                miles_between_two_points(cLat, cLng, pathpoints[currentWaypoint].lat, pathpoints[currentWaypoint].lng), 
-                miles_between_two_points(plane.lastLat, plane.lastLong, cLat, cLng), 
-                plane)
-            Move_Towards_target(pathpoints[currentWaypoint].lat, pathpoints[currentWaypoint].lng, cLat, cLng, plane.lastLat, plane.lastLong, kit, plane)
-            Have_Reached_Waypoint(pathpoints[currentWaypoint].lat, pathpoints[currentWaypoint].lng, cLat, cLng, mpl3115a2.read_alt(), pathpoints[currentWaypoint].alt)
-            Check_If_Stalling(
-                DetermineClimbDesentRate(
-                    mpl3115a2.read_alt(), 
-                    plane.lastAlt, 
-                    miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime), 
-                    miles_between_two_points(plane.lastLat, plane.lastLong, cLat, cLng)), 
-                plane.lastRate,
-                DetermineClimbDesentRate(
-                    pathpoints[currentWaypoint].alt, 
-                    mpl3115a2.read_alt(), 
-                    miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime), 
-                    miles_between_two_points(cLat, cLng, pathpoints[currentWaypoint].lat, pathpoints[currentWaypoint].lng)), 
-                get_y_pitch())
-            On_Final(plane)
-        case "slow":
-            Set_throttle(kit, 120, plane)
-            cLat, cLng = Get_Cordinates()
-            Move_Towards_target(pathpoints[currentWaypoint].lat, pathpoints[currentWaypoint].lng, cLat, cLng, plane.lastLat, plane.lastLong, kit, plane)
-            Slow_Flight_Decent(
-                mpl3115a2.read_alt(),
-                plane.lastAlt,
-                miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime),
-                DetermineClimbDesentRate(
-                    pathpoints[currentWaypoint].alt, 
-                    mpl3115a2.read_alt(), 
-                    miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime), 
-                    miles_between_two_points(cLat, cLng, pathpoints[currentWaypoint].lat, pathpoints[currentWaypoint].lng)),
-                kit,
-                plane
-            )
-            Slow_Flight_Speed(
-                miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime),
-                50,
-                kit,
-                plane
-            )
-            Should_Land(
-                mpl3115a2.read_alt(),
-                miles_between_two_points(cLat, cLng, pathpoints[currentWaypoint].lat, pathpoints[currentWaypoint].lng),
-                pathpoints[currentWaypoint].alt,
-                plane
-            )
-        case "land":
-            Set_throttle(kit, plane.motorSpeed - 5, plane)
-            cLat, cLng = Get_Cordinates()
-            Keep_Landing_Heading(
-                determin_direction_from_two_points(plane.lastLat, plane.lastLong, cLat, cLng),
-                determin_direction_from_two_points(pathpoints[currentWaypoint-1].lat, pathpoints[currentWaypoint-1].lng, pathpoints[currentWaypoint].lat, pathpoints[currentWaypoint].lng),
-                kit,
-                plane
-            )
-            Keep_Pitch_Level(get_x_pitch, kit, plane)
-            Has_Landed(mpl3115a2.read_alt(), pathpoints[currentWaypoint].alt)
-        case "stall":
+                miles_between_two_points(plane.lastLat, plane.lastLong, cLat, cLng)), 
+            plane.lastRate,
+            DetermineClimbDesentRate(
+                pathpoints[currentWaypoint].alt, 
+                mpl3115a2.read_alt(), 
+                miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime), 
+                miles_between_two_points(cLat, cLng, pathpoints[currentWaypoint].lat, pathpoints[currentWaypoint].lng)), 
+            get_y_pitch())
+        On_Final(plane)
+    elif(mode == "slow"):
+        Set_throttle(kit, 120, plane)
+        cLat, cLng = Get_Cordinates()
+        Move_Towards_target(pathpoints[currentWaypoint].lat, pathpoints[currentWaypoint].lng, cLat, cLng, plane.lastLat, plane.lastLong, kit, plane)
+        Slow_Flight_Decent(
+            mpl3115a2.read_alt(),
+            plane.lastAlt,
+            miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime),
+            DetermineClimbDesentRate(
+                pathpoints[currentWaypoint].alt, 
+                mpl3115a2.read_alt(), 
+                miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime), 
+                miles_between_two_points(cLat, cLng, pathpoints[currentWaypoint].lat, pathpoints[currentWaypoint].lng)),
+            kit,
+            plane
+        )
+        Slow_Flight_Speed(
+            miles_per_hour(miles_between_two_points(cLat, cLng, plane.lastLat, plane.lastLong), datetime.datetime.now(), plane.lastTime),
+            50,
+            kit,
+            plane
+        )
+        Should_Land(
+            mpl3115a2.read_alt(),
+            miles_between_two_points(cLat, cLng, pathpoints[currentWaypoint].lat, pathpoints[currentWaypoint].lng),
+            pathpoints[currentWaypoint].alt,
+            plane
+        )
+    elif(mode == "land"):
+        Set_throttle(kit, plane.motorSpeed - 5, plane)
+        cLat, cLng = Get_Cordinates()
+        Keep_Landing_Heading(
+            determin_direction_from_two_points(plane.lastLat, plane.lastLong, cLat, cLng),
+            determin_direction_from_two_points(pathpoints[currentWaypoint-1].lat, pathpoints[currentWaypoint-1].lng, pathpoints[currentWaypoint].lat, pathpoints[currentWaypoint].lng),
+            kit,
+            plane
+        )
+        Keep_Pitch_Level(get_x_pitch, kit, plane)
+        Has_Landed(mpl3115a2.read_alt(), pathpoints[currentWaypoint].alt)
+    elif(mode == "stall"):
             take_Pic_and_save(camera, pictureLocation)
             Recover(
                 plane, 
@@ -788,3 +787,8 @@ while True:
                 get_y_pitch, 
                 plane)
             Should_Emergency_Land(mpl3115a2.read_alt(), pathpoints[currentWaypoint].alt, plane.startingAlt, plane)
+    elif(mode == "stop"):
+        Set_throttle(kit, 0, plane)
+        Set_Elevator(kit, 90, plane)
+        Set_Rudder(kit, 90, plane)
+        break
