@@ -1,4 +1,5 @@
 import bluetooth
+import json
 
 server_address = "B8:27:EB:E0:63:91"  # replace with the MAC address of the Linux server
 port = 1
