@@ -2,7 +2,7 @@ import serial
 import time
 
 # Configure UART
-ser = serial.Serial('/dev/ttyAMA0', 9600)  # Replace '/dev/ttyAMA0' with the appropriate UART port
+ser = serial.Serial('/dev/ttyS0', 9600)  # Replace '/dev/ttyAMA0' with the appropriate UART port
 ser.timeout = 1
 
 # Variables to transmit
