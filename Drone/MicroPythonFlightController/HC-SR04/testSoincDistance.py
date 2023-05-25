@@ -2,15 +2,18 @@ import RPi.GPIO as GPIO
 import time
 
 # Set GPIO mode
-GPIO.setmode(GPIO.BCM)
+GPIO.setmode(GPIO.BOARD)
 
 # Define GPIO pins
-trigger_pin = 23  # GPIO pin connected to the HC-SR04 trigger pin
-echo_pin = 24     # GPIO pin connected to the HC-SR04 echo pin
+trigger_pin = 7  # GPIO pin connected to the HC-SR04 trigger pin
+echo_pin = 11     # GPIO pin connected to the HC-SR04 echo pin
 
 # Set up GPIO pins
 GPIO.setup(trigger_pin, GPIO.OUT)
 GPIO.setup(echo_pin, GPIO.IN)
+
+GPIO.output(trigger_pin, GPIO.LOW)
+time.sleep(2)
 
 def measure_distance():
     # Send a trigger pulse
@@ -19,17 +22,15 @@ def measure_distance():
     GPIO.output(trigger_pin, GPIO.LOW)
 
     # Wait for the echo pulse
-    pulse_start = time.time()
-    while GPIO.input(echo_pin) == GPIO.LOW:
+    while GPIO.input(echo_pin) == 0:
         pulse_start = time.time()
 
-    pulse_end = time.time()
-    while GPIO.input(echo_pin) == GPIO.HIGH:
+    while GPIO.input(echo_pin) == 1:
         pulse_end = time.time()
 
     # Calculate distance
     pulse_duration = pulse_end - pulse_start
-    speed_of_sound = 343  # meters per second
+    speed_of_sound = 360  # meters per second
     distance = (pulse_duration * speed_of_sound) / 2
 
     return distance
