@@ -15,7 +15,7 @@ from adafruit_servokit import ServoKit
 #Location Variables
 portNumber = 1
 pictureLocation = "/home/blake/Documents/FlightPics/"
-gpsPort="/dev/ttyAMA0"
+gpsPort="/dev/ttyS0"
 elevatorPort = 1
 rudderPort = 0
 motorPort = 2
