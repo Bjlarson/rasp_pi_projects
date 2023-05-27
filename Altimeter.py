@@ -6,6 +6,7 @@
  
 import smbus
 import time
+import adafruit_mpl3115a2
  
 f = open('Altimeter.txt', 'w')
 f.close()
@@ -100,7 +101,6 @@ class MPL3115A2():
  
 		return {'p' : pressure}
  
-import adafruit_mpl3115a2
 mpl3115a2 = MPL3115A2()
 
 while True :
