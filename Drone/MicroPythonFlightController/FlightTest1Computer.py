@@ -7,7 +7,7 @@ import adafruit_mpl3115a2
 
 # Define GPIO pins
 trigger_pin = 7  # GPIO pin connected to the HC-SR04 trigger pin
-echo_pin = 11     # GPIO pin connected to the HC-SR04 echo pin
+echo_pin = 12     # GPIO pin connected to the HC-SR04 echo pin
 
 #Variables to transmit
 motor = 40
@@ -22,6 +22,10 @@ timer_start = 0.0
 timer = 0.0
 desending = False
 Go = False
+average_alt = 0
+last_alt = 0
+target_alt = 0
+
 # Get I2C bus
 bus = smbus.SMBus(3)
  
@@ -162,33 +166,56 @@ def measure_distance():
 
     return distance
 
+#gets a rolling average for altimeter to mitigate the variation in altitude readings
+def rolling_average(value, window, current):
+     #removes the oldest value from the current average
+     current -= current / window
+
+     #adds the new value to the current average
+     current += value / window
+
+     return round(current, 2)
+     
+#waits for a message from bluetooth and prints the string revived by the bluetooth connection
 print(client_socket.recv(1024))
+
+#sets up the alimeter sensor
+mpl3115a2.control_alt_config()
+mpl3115a2.data_config()
+time.sleep(1)
+
+#sets the target altitude for the test
+taralt = mpl3115a2.read_alt_temp()
+target_alt = taralt['a'] + 5
 
 #Main Loop
 while True:
+    #Gets distance from the ultra sonic sensor
     Distance = measure_distance()
+
+
     alt = mpl3115a2.read_alt_temp()
-    print("Altitude : %.2f Meeters"%(alt['a']))
+    average_alt = rolling_average(alt['a'] * 3.281,5,average_alt)
 
     if(desending):
         if(Distance <= 5):
             motor -= 0.5
-        elif(Distance >= last_Distance):
+        elif(average_alt >= last_alt):
             motor -= .1
-    elif(Distance >= 30):
+    elif(average_alt >= target_alt):
         timer = time.time()
 
-        if(Distance > last_Distance + .5):
+        if(average_alt > target_alt + 1.5):
             motor -= .1
-        elif(Distance < last_Distance + .5):
-            motor += .1
+        if(average_alt < last_alt + .5):
+             motor += .1
     
         if(timer_start == 0.0):
             timer_start = timer
         elif(timer-timer_start >= 30):
             desending = True
             motor -= .1
-    elif(Distance <= last_Distance):
+    elif(average_alt <= target_alt):
         motor += .1
 
     #Construct the data string to send
@@ -197,6 +224,7 @@ while True:
     ser.write(data_string.encode('utf-8'))
 
     last_Distance = Distance
+    last_alt = average_alt
 
     time.sleep(0.2)
         
