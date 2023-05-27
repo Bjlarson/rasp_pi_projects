@@ -77,8 +77,14 @@ while True:
             motor -= 0.5
         elif(Distance >= last_Distance):
             motor -= .1
-    elif(30 <= Distance <= 35):
+    elif(Distance >= 30):
         timer = time.time()
+        
+        if(Distance > last_Distance + .5):
+            motor -= .1
+        elif(Distance < last_Distance + .5):
+            motor += .1
+    
         if(timer_start == 0.0):
             timer_start = timer
         elif(timer-timer_start >= 30):
