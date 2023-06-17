@@ -87,22 +87,17 @@ GPIO.setup(echo_pin, GPIO.IN)
 GPIO.output(trigger_pin, GPIO.LOW)
 time.sleep(2)
 
-mpl3115a2 = MPL3115A2()
-mpl3115a2.control_alt_config()
-mpl3115a2.data_config()
-time.sleep(1)
-
 # setup connection with bluetooth
 server_socket = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
 server_socket.bind(("", bluetooth.PORT_ANY))
 server_socket.listen(1)
 
 port = server_socket.getsockname()[1]
-print("Waiting for connection on RFCOMM channel " + port)
+print("Waiting for connection on RFCOMM channel ", port)
 
 # try to connect and start listening to stream
 client_socket, client_address = server_socket.accept()
-print("Accepted connection from " + client_address)
+print("Accepted connection from ", client_address)
 
 class MPL3115A2():
 	def control_alt_config(self):
@@ -180,6 +175,7 @@ def rolling_average(value, window, current):
 print(client_socket.recv(1024))
 
 #sets up the alimeter sensor
+mpl3115a2 = MPL3115A2()
 mpl3115a2.control_alt_config()
 mpl3115a2.data_config()
 time.sleep(1)
@@ -189,42 +185,48 @@ taralt = mpl3115a2.read_alt_temp()
 target_alt = taralt['a'] + 5
 
 #Main Loop
-while True:
-    #Gets distance from the ultra sonic sensor
-    Distance = measure_distance()
+try:
+    while True:
+        #Gets distance from the ultra sonic sensor
+        Distance = measure_distance()
 
 
-    alt = mpl3115a2.read_alt_temp()
-    average_alt = rolling_average(alt['a'] * 3.281,5,average_alt)
+        alt = mpl3115a2.read_alt_temp()
+        average_alt = rolling_average(alt['a'] * 3.281,5,average_alt)
 
-    if(desending):
-        if(Distance <= 5):
-            motor -= 0.5
-        elif(average_alt >= last_alt):
-            motor -= .1
-    elif(average_alt >= target_alt):
-        timer = time.time()
+        if(desending):
+            if(Distance <= 5):
+                motor -= 0.5
+            elif(average_alt >= last_alt):
+                motor -= .1
+        elif(average_alt >= target_alt):
+            timer = time.time()
 
-        if(average_alt > target_alt + 1.5):
-            motor -= .1
-        if(average_alt < last_alt + .5):
-             motor += .1
+            if(average_alt > target_alt + 1.5):
+                motor -= .1
+            if(average_alt < last_alt + .5):
+                motor += .1
     
-        if(timer_start == 0.0):
-            timer_start = timer
-        elif(timer-timer_start >= 30):
-            desending = True
-            motor -= .1
-    elif(average_alt <= target_alt):
-        motor += .1
+            if(timer_start == 0.0):
+                timer_start = timer
+            elif(timer-timer_start >= 30):
+                desending = True
+                motor -= .1
+        elif(average_alt <= target_alt):
+            motor += .1
 
-    #Construct the data string to send
-    data_string = f"M:{motor},P:{pitch},R:{roll},Y:{yaw}\n"
+        #Construct the data string to send
+        data_string = f"M:{motor},P:{pitch},R:{roll},Y:{yaw}\n"
 
-    ser.write(data_string.encode('utf-8'))
+        ser.write(data_string.encode('utf-8'))
 
-    last_Distance = Distance
-    last_alt = average_alt
+        last_Distance = Distance
+        last_alt = average_alt
 
-    time.sleep(0.2)
+        time.sleep(0.2)
         
+except KeyboardInterrupt:
+    # Handle Keyboard Interrupt
+    motor = 40
+    data_string = f"M:{motor},P:{pitch},R:{roll},Y:{yaw}\n"
+    ser.write(data_string.encode('utf-8')) 
